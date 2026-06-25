@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Hallucination in World Models</title>
+
+	<!-- Social share (Open Graph + Twitter). Absolute URLs: scrapers reject relative og:image paths. -->
+	<meta name="description" content="An interactive web version of our study on hallucination in world models.">
+	<link rel="canonical" href="https://www.nicklashansen.com/mmbench2/">
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="https://www.nicklashansen.com/mmbench2/">
+	<meta property="og:site_name" content="Hallucination in World Models">
+	<meta property="og:title" content="Hallucination in World Models is Predictable and Preventable">
+	<meta property="og:description" content="An interactive web version of our study on hallucination in world models.">
+	<meta property="og:image" content="https://www.nicklashansen.com/mmbench2/images/og-card.jpg">
+	<meta property="og:image:type" content="image/jpeg">
+	<meta property="og:image:width" content="1200">
+	<meta property="og:image:height" content="630">
+	<meta property="og:image:alt" content="Hallucination in World Models is Predictable and Preventable — Nicklas Hansen, Xiaolong Wang, UC San Diego.">
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:title" content="Hallucination in World Models is Predictable and Preventable">
+	<meta name="twitter:description" content="An interactive web version of our study on hallucination in world models..">
+	<meta name="twitter:image" content="https://www.nicklashansen.com/mmbench2/images/og-card.jpg">
+	<meta name="twitter:image:alt" content="Hallucination in World Models is Predictable and Preventable — Nicklas Hansen, Xiaolong Wang, UC San Diego.">
+
+	<link rel="stylesheet" href="styles.css?v=6.4">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+		integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous" referrerpolicy="no-referrer">
+	<script type="text/x-mathjax-config">
+		MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+	</script>
+	<script type="text/javascript" async
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"
+		integrity="sha384-e/4/LvThKH1gwzXhdbY2AsjR3rm7LHWyhIG5C0jiRfn8AN2eTN5ILeztWw0H9jmN" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body class="paper paper-body" id="top">
+
+	<!-- Hugging Face logo, defined once and referenced via <use href="#ico-hf">.
+	     To tweak the mark, edit the single <path> below (it lives in viewBox "0 0 24 24").
+	     To de-emphasize detail at small sizes, narrow the viewBox to crop toward the face,
+	     e.g. viewBox="2 1 20 20" zooms in; or simplify/replace the path data outright. -->
+	<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+		<symbol id="ico-hf" viewBox="0 0 24 24"><path d="M 12.025 1.13 C 6.255 1.13 1.576 5.777 1.576 11.508 C 1.576 12.62 1.754 13.689 2.079 14.693 C 2.143 14.471 2.282 14.249 2.495 14.116 C 2.652 14.016 2.834 13.964 3.019 13.966 C 3.312 13.966 3.603 14.09 3.859 14.25 C 4.137 14.423 4.339 14.658 4.569 14.944 C 4.795 15.226 5.027 15.555 5.253 15.895 L 5.253 15.881 C 5.27 15.557 5.359 15.259 5.517 15.007 C 5.675 14.755 5.92 14.52 6.279 14.464 C 6.579 14.417 6.875 14.524 7.066 14.667 C 7.257 14.81 7.376 14.98 7.466 15.134 C 7.616 15.391 7.678 15.602 7.699 15.676 C 7.709 15.702 8.352 17.228 9.356 18.216 C 9.972 18.821 10.366 19.439 10.438 20.128 C 10.493 20.665 10.342 21.187 10.058 21.7 C 10.695 21.821 11.352 21.887 12.025 21.887 C 12.682 21.887 13.323 21.824 13.946 21.709 C 13.659 21.192 13.506 20.668 13.562 20.128 C 13.632 19.438 14.027 18.821 14.643 18.215 C 15.647 17.228 16.29 15.702 16.3 15.676 C 16.321 15.602 16.383 15.391 16.533 15.134 C 16.623 14.98 16.741 14.811 16.933 14.667 C 17.159 14.499 17.441 14.427 17.72 14.464 C 18.079 14.52 18.324 14.754 18.482 15.007 C 18.64 15.26 18.729 15.557 18.747 15.881 L 18.747 15.896 C 18.972 15.556 19.204 15.226 19.43 14.944 C 19.66 14.658 19.862 14.424 20.14 14.25 C 20.397 14.09 20.687 13.966 20.98 13.965 C 21.166 13.964 21.347 14.017 21.504 14.116 C 21.732 14.259 21.877 14.504 21.934 14.741 L 21.94 14.781 C 22.294 13.726 22.474 12.621 22.474 11.508 C 22.474 5.777 17.796 1.13 12.025 1.13 M 8.327 6.583 C 8.575 6.581 8.82 6.641 9.04 6.757 C 9.389 6.942 9.65 7.258 9.766 7.636 C 9.882 8.013 9.843 8.421 9.657 8.77 C 9.474 9.113 8.967 8.844 8.627 8.964 C 8.247 9.098 8.023 9.59 7.638 9.386 C 7.033 9.068 6.723 8.378 6.886 7.715 C 7.05 7.051 7.645 6.584 8.328 6.583 M 15.814 6.583 C 16.497 6.585 17.092 7.052 17.255 7.715 C 17.418 8.379 17.108 9.068 16.503 9.386 C 16.118 9.59 15.953 9.113 15.573 8.979 C 15.233 8.859 14.667 9.113 14.484 8.77 C 14.298 8.421 14.259 8.013 14.375 7.636 C 14.491 7.258 14.752 6.942 15.101 6.757 C 15.321 6.641 15.566 6.581 15.814 6.583 M 8.489 11.458 C 9.077 11.468 10.454 12.615 12.061 12.622 C 13.668 12.615 15.045 11.467 15.633 11.458 C 15.829 11.455 15.938 11.578 15.938 11.912 C 15.938 12.798 15.6 14.168 14.375 15.114 C 14.293 15.098 12.051 14.81 12.032 14.823 C 12.032 14.823 9.754 15.09 9.747 15.115 C 8.608 14.24 8.184 12.798 8.184 11.912 C 8.184 11.578 8.293 11.455 8.489 11.458 M 9.325 21.812 C 10.149 20.622 10.091 19.73 8.96 18.618 C 7.83 17.506 7.171 15.88 7.171 15.88 C 7.171 15.88 6.925 14.935 6.365 15.022 C 5.805 15.109 5.395 16.521 6.567 17.384 C 7.74 18.248 6.334 18.834 5.882 18.024 C 5.432 17.212 4.199 15.128 3.56 14.729 C 2.921 14.33 2.471 14.554 2.622 15.376 C 2.773 16.198 5.444 18.189 5.184 18.62 C 4.924 19.051 4.008 18.114 4.008 18.114 C 4.008 18.114 1.142 15.547 0.518 16.216 C -0.106 16.885 0.991 17.446 2.555 18.376 C 4.119 19.308 4.241 19.554 4.019 19.906 C 3.797 20.258 0.344 17.395 0.019 18.609 C -0.304 19.823 3.543 20.176 3.306 21.014 C 3.068 21.853 0.596 19.427 0.09 20.372 C -0.416 21.318 3.58 22.428 3.612 22.436 C 4.902 22.766 8.18 23.464 9.325 21.812 M 14.674 21.812 C 13.85 20.622 13.908 19.73 15.039 18.618 C 16.169 17.506 16.828 15.88 16.828 15.88 C 16.828 15.88 17.074 14.935 17.634 15.022 C 18.194 15.109 18.604 16.521 17.432 17.384 C 16.259 18.248 17.665 18.834 18.117 18.024 C 18.568 17.212 19.8 15.128 20.439 14.729 C 21.078 14.33 21.528 14.554 21.377 15.376 C 21.226 16.198 18.555 18.189 18.815 18.62 C 19.075 19.051 19.991 18.114 19.991 18.114 C 19.991 18.114 22.857 15.547 23.481 16.216 C 24.105 16.885 23.008 17.446 21.444 18.376 C 19.88 19.308 19.758 19.554 19.98 19.906 C 20.202 20.258 23.655 17.395 23.98 18.609 C 24.303 19.823 20.456 20.176 20.693 21.014 C 20.931 21.853 23.403 19.427 23.909 20.372 C 24.415 21.318 20.419 22.428 20.387 22.436 C 19.097 22.766 15.819 23.464 14.674 21.812"/></symbol>
+	</svg>
+
+	<div class="progress"></div>
+
+	<div class="topbar">
+		<a href="https://github.com/nicklashansen/mmbench2" target="_blank" rel="noopener"><i class="fa fa-github"></i>&ensp;Code</a>
+		<span class="topbar-title">Hallucination in World Models</span>
+		<a href="paper.pdf"><i class="fa">&#xf1c1;</i>&ensp;PDF</a>
+	</div>
+
+	<nav class="dotnav" aria-label="Section navigation"></nav>
+
+	<!-- ===================================================================
+	     HERO
+	     =================================================================== -->
+	<header class="hero">
+		<div class="hero-mosaic" aria-hidden="true">
+			<video autoplay loop muted playsinline><source src="videos/teaser/cheetah-run.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/pygame-coinrun.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/mw-assembly.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/rd-open-slide.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/pygame-reacher-easy.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/pygame-bird-attack.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/og-point-maze.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/quadruped-run.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/mujoco-walker.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/pygame-foraging.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/pygame-whirlpool.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/mw-window-close.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/atari-road-runner.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/pygame-point-maze-var1.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/pygame-pong.mp4" type="video/mp4"></video>
+			<video autoplay loop muted playsinline><source src="videos/teaser/pygame-dungeon-explorer1.mp4" type="video/mp4"></video>
+			
+		</div>
+		<div class="hero-veil" aria-hidden="true"></div>
+		<div class="hero-content">
+			<span class="eyebrow">Interactive Paper</span>
+			<h1>Hallucination in World Models is<br>Predictable and Preventable</h1>
+			<div class="hero-authors">
+				<a href="https://www.nicklashansen.com" class="nobreak">Nicklas Hansen</a>,&ensp;
+				<a href="https://xiaolonw.github.io" class="nobreak">Xiaolong Wang</a>
+			</div>
+			<div class="hero-affil">UC San Diego</div>
+			<div class="hero-cta">
+				<a href="#live-demo" class="btn btn-live"><span class="live-dot"></span>Live demo</a>
+				<a href="paper.pdf" class="btn ghost"><i class="fa">&#xf1c1;</i>&ensp;Read the PDF</a>
+				<span class="cta-break" aria-hidden="true"></span>
+				<a href="https://github.com/nicklashansen/mmbench2" target="_blank" rel="noopener" class="btn ghost btn-iconly" aria-label="Code"><i class="fa fa-github" aria-hidden="true"></i><span class="btn-label">&ensp;Code</span></a>
+				<a href="https://huggingface.co/datasets/nicklashansen/mmbench2" target="_blank" rel="noopener" class="btn ghost btn-iconly" aria-label="Dataset"><i class="fa fa-database" aria-hidden="true"></i><span class="btn-label">&ensp;Dataset</span></a>
+				<a href="https://huggingface.co/nicklashansen/mmbench2-models" target="_blank" rel="noopener" class="btn ghost btn-iconly" aria-label="Model"><svg class="hf-ic" aria-hidden="true" focusable="false"><use href="#ico-hf"/></svg><span class="btn-label">&ensp;Model</span></a>
+			</div>
+		</div>
+		<div class="scrollcue" aria-hidden="true"><span>Scroll to begin</span><div class="chev"></div></div>
+	</header>
+
+	<!-- ===================================================================
+	     LIVE DEMO — lead-in
+	     =================================================================== -->
+	<section class="act act--dark act--demo" id="live-demo" data-nav="Live demo">
+		<div class="wrap">
+			<h2 class="reveal">Live demo</h2>
+			<p class="lead reveal d1">
+				Live interaction with our <span class="bold">350M-parameter world model trained on 210 tasks</span>. Control it with your keyboard! Our hallucination predictors run at every step; a <span style="color:#ef4444;">red</span> border indicates that a hallucination is detected.
+				<br/><br/>
+				Can you make the world model hallucinate?
+			</p>
+		</div>
+		<div class="wrap reveal d2">
+			<div class="demo-shell" id="liveDemo">
+				<div class="demo-head">
+					<span class="demo-led" id="demoLed"></span>
+					<span class="demo-led-lbl" id="demoLedLbl">checking&hellip;</span>
+					<span class="demo-pill" id="demoPill"></span>
+					<select id="demoTask" class="demo-task" aria-label="Switch task"></select>
+					<button class="demo-ibtn" id="demoResetBtn" aria-label="Reset episode" title="Reset episode (R)"><i class="fa fa-undo"></i></button>
+					<button class="demo-ibtn" id="demoEndBtn" aria-label="End session" title="End session (Q)"><i class="fa fa-times"></i></button>
+				</div>
+				<div class="demo-stage" id="demoStage">
+					<img id="demoFrame" alt="Live world-model rollout" src="images/demo-poster.jpg" draggable="false"/>
+					<div class="demo-verdict" id="demoVerdict" hidden><span class="vdot"></span><span class="vtext">Stable</span></div>
+					<div class="demo-hud" id="demoHud" aria-hidden="true">
+						<div class="hud-grid" id="hudWasd">
+							<span></span><span class="hud-key" data-k="w">W</span><span></span>
+							<span class="hud-key" data-k="a">A</span><span class="hud-key" data-k="s">S</span><span class="hud-key" data-k="d">D</span>
+						</div>
+						<div class="hud-grid" id="hudArrows">
+							<span></span><span class="hud-key" data-k="ArrowUp"><i class="fa fa-arrow-up"></i></span><span></span>
+							<span class="hud-key" data-k="ArrowLeft"><i class="fa fa-arrow-left"></i></span><span class="hud-key" data-k="ArrowDown"><i class="fa fa-arrow-down"></i></span><span class="hud-key" data-k="ArrowRight"><i class="fa fa-arrow-right"></i></span>
+						</div>
+					</div>
+					<div class="demo-paused" id="demoPaused"><span class="demo-paused-badge"><i class="fa fa-pause"></i></span></div>
+					<div class="demo-overlay show" id="demoOverlay">
+						<div class="demo-overlay-msg" id="demoOverlayMsg"></div>
+						<button class="demo-btn demo-btn--primary" id="demoLaunch" style="display:none;">&#9654;&#xFE0E;&ensp;Launch live demo</button>
+					</div>
+				</div>
+				<div class="demo-foot">
+					<div class="demo-keys">
+						<span class="demo-keygroup">
+							<span class="demo-keycap">WASD</span><span class="demo-keycap demo-keycap--arrows" aria-hidden="true"><i class="fa fa-arrow-up"></i><i class="fa fa-arrow-down"></i><i class="fa fa-arrow-left"></i><i class="fa fa-arrow-right"></i></span><span class="demo-keylbl">act</span>
+						</span>
+						<span class="demo-keygroup">
+							<span class="demo-keycap">Space</span><span class="demo-keylbl">pause</span>
+						</span>
+						<span class="demo-keygroup">
+							<span class="demo-keycap">R</span><span class="demo-keylbl">reset</span>
+						</span>
+					</div>
+					<p class="demo-touchnote" hidden>Tap the on-screen keys to move, and tap the frame to pause.</p>
+				</div>
+				<div class="demo-legend">
+					<span class="dl-end">stable</span>
+					<span class="dl-bar"></span>
+					<span class="dl-end">hallucination</span>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ===================================================================
+	     ACT 1 — THE PROBLEM
+	     =================================================================== -->
+	<section class="act act--dark" id="problem" data-nav="Problem">
+		<div class="wrap">
+			<h2 class="reveal">Hallucination in world models</h2>
+			<p class="lead reveal d1">
+				Modern generative world models render strikingly realistic, action-controllable futures. But the rollouts they produce frequently <span class="italic">hallucinate</span>: they stay visually fluent and superficially plausible while drifting away from the ground-truth dynamics. When used downstream for planning or policy learning, model hallucination leads to incorrect decisions.
+				<br/><br/>
+				In this work, we train a <span class="bold">350M-parameter generative world model on a large dataset spanning 210 tasks</span> and show that, even at this scale, hallucination is both <span class="italic">predictable</span> (we can predict when it will happen) and <span class="italic">preventable</span> (the underlying issue is, to a great extent, fixable).</p>
+		</div>
+		<div class="wrap-wide reveal d2 flow--tight">
+			<div class="duo" id="rolloutCompare">
+<!-- Act 1 "fluent but quietly wrong" example: MW Push (base/pretrained model). GT arm drives down and
+	     completes the push; the WM arm stalls and drifts, never following through. Alternative picks (also
+	     good, files kept): Pygame Point Maze var1 (videos/rollouts/pygame-point-maze-var1_{gt,wm}.mp4 — WM
+	     agent takes a different corridor) and Cup Catch base (videos/rollouts/cup-catch-base_{gt,wm}.mp4). -->
+				<div class="duo-stage">
+					<figure class="duo-cell">
+						<video class="compare-vid compare-gt" data-lazy loop muted playsinline><source data-src="videos/rollouts/mw-push-base_gt.mp4" type="video/mp4"></video>
+						<figcaption class="duo-tag duo-tag--l">Ground truth</figcaption>
+					</figure>
+					<figure class="duo-cell">
+						<video class="compare-vid compare-wm" data-lazy loop muted playsinline><source data-src="videos/rollouts/mw-push-base_wm.mp4" type="video/mp4"></video>
+						<figcaption class="duo-tag duo-tag--r">World model</figcaption>
+					</figure>
+				</div>
+				<div class="duo-controls">
+					<button class="duo-play" id="rolloutPlay" type="button" aria-label="Pause">
+						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+							<g class="ic-pause"><rect x="6.5" y="4.5" width="3.7" height="15" rx="1.1"></rect><rect x="13.8" y="4.5" width="3.7" height="15" rx="1.1"></rect></g>
+							<path class="ic-play" d="M8 4.8 L19 12 L8 19.2 Z"></path>
+						</svg>
+					</button>
+					<div class="compare-timeline" aria-hidden="true">
+						<span class="compare-tl-cap compare-tl-cap--l">in&nbsp;sync</span>
+						<div class="compare-tl-track"><div class="compare-tl-fill"></div><div class="compare-tl-knob"></div></div>
+						<span class="compare-tl-cap compare-tl-cap--r">drift</span>
+					</div>
+				</div>
+			</div>
+			<p class="band-note">An open-loop rollout from our 350M-parameter base model (right) vs. its ground truth (left). The imagined trajectory looks visually plausible but largely ignores the action sequence it was conditioned on. This is exactly the type of hallucination we set out to study.</p>
+		</div>
+		<div class="wrap reveal flow">
+			<p class="pullquote">We argue that hallucination in world models is, first and foremost, a <span class="accent">data-coverage problem</span>, making it both <span class="italic">predictable</span> and <span class="italic">preventable</span>.</p>
+		</div>
+	</section>
+
+	<!-- ===================================================================
+	     ACT 2 — MMBENCH2 DATASET
+	     =================================================================== -->
+	<section class="act act--light" id="dataset" data-nav="Dataset">
+		<div class="wrap">
+			<h2 class="reveal">A 427-hour testbed for world modeling</h2>
+			<p class="lead reveal d1">Studying coverage needs three things no benchmark offered at once: full control of the training pipeline, behaviorally diverse data across many tasks, and live simulators to probe the gaps online. So we built <span class="bold">MMBench2</span> which includes ground-truth actions, rewards, language instructions, and a live environment for every task.<br/><br/>Naturally, <span class="bold">MMBench2 is fully open-source</span>.</p>
+			<div class="counters reveal">
+				<div class="counter"><div class="num" data-target="427" data-suffix="h">0</div><div class="lbl">video</div></div>
+				<div class="counter"><div class="num" data-target="210">0</div><div class="lbl">tasks</div></div>
+				<div class="counter"><div class="num" data-target="10">0</div><div class="lbl">domains</div></div>
+				<div class="counter"><div class="num" data-target="65.6" data-decimals="1" data-suffix="k">0</div><div class="lbl">trajectories</div></div>
+			</div>
+		</div>
+	</section>
+
+	<div class="bleed act--dark" style="padding:10px 0 30px;">
+		<div class="reveal">
+			<div class="taskbelt" id="taskBelt" role="region" tabindex="0" aria-label="World-model rollouts across the MMBench2 task suite. Drag, swipe, or use arrow keys to explore.">
+				<div class="belt-row" data-row="0">
+					<div class="belt-tile" data-task="pygame-pong"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/pygame-pong.mp4" type="video/mp4"></video><span class="belt-cap"><b>Pong</b><i style="--dc:#9a86c9">MiniArcade</i></span></div>
+					<div class="belt-tile" data-task="mw-assembly"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/mw-assembly.mp4" type="video/mp4"></video><span class="belt-cap"><b>Assembly</b><i style="--dc:#d05a5e">Meta-World</i></span></div>
+					<div class="belt-tile" data-task="atari-road-runner"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/atari-road-runner.mp4" type="video/mp4"></video><span class="belt-cap"><b>Road Runner</b><i style="--dc:#c9b48c">Atari</i></span></div>
+					<div class="belt-tile" data-task="mujoco-walker"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/mujoco-walker.mp4" type="video/mp4"></video><span class="belt-cap"><b>Walker</b><i style="--dc:#5fb87a">MuJoCo</i></span></div>
+					<div class="belt-tile" data-task="ms-ant-run"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/ms-ant-run.mp4" type="video/mp4"></video><span class="belt-cap"><b>Ant Run</b><i style="--dc:#e3936a">ManiSkill3</i></span></div>
+					<div class="belt-tile" data-task="quadruped-run"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/quadruped-run.mp4" type="video/mp4"></video><span class="belt-cap"><b>Quadruped Run</b><i style="--dc:#5b86c4">DMControl</i></span></div>
+					<div class="belt-tile" data-task="og-ant"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/og-ant.mp4" type="video/mp4"></video><span class="belt-cap"><b>Ant</b><i style="--dc:#9a9a9a">OGBench</i></span></div>
+					<div class="belt-tile" data-task="rd-push-green"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/rd-push-green.mp4" type="video/mp4"></video><span class="belt-cap"><b>Push Green</b><i style="--dc:#e09acf">RoboDesk</i></span></div>
+					<div class="belt-tile" data-task="lunarlander-hover"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/lunarlander-hover.mp4" type="video/mp4"></video><span class="belt-cap"><b>Lunar Lander Hover</b><i style="--dc:#a08a76">Box2D</i></span></div>
+					<div class="belt-tile" data-task="pygame-foraging"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/pygame-foraging.mp4" type="video/mp4"></video><span class="belt-cap"><b>Foraging</b><i style="--dc:#9a86c9">MiniArcade</i></span></div>
+					<div class="belt-tile" data-task="mw-pick-place"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/mw-pick-place.mp4" type="video/mp4"></video><span class="belt-cap"><b>Pick Place</b><i style="--dc:#d05a5e">Meta-World</i></span></div>
+					<div class="belt-tile" data-task="atari-boxing"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/atari-boxing.mp4" type="video/mp4"></video><span class="belt-cap"><b>Boxing</b><i style="--dc:#c9b48c">Atari</i></span></div>
+					<div class="belt-tile" data-task="hopper-hop"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/hopper-hop.mp4" type="video/mp4"></video><span class="belt-cap"><b>Hopper Hop</b><i style="--dc:#5b86c4">DMControl</i></span></div>
+					<div class="belt-tile" data-task="pygame-bird-attack"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/pygame-bird-attack.mp4" type="video/mp4"></video><span class="belt-cap"><b>Bird Attack</b><i style="--dc:#9a86c9">MiniArcade</i></span></div>
+					<div class="belt-tile" data-task="pygame-reacher-easy"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/pygame-reacher-easy.mp4" type="video/mp4"></video><span class="belt-cap"><b>Reacher Easy</b><i style="--dc:#9a86c9">MiniArcade</i></span></div>
+					<div class="belt-tile" data-task="pygame-point-maze-var1"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/pygame-point-maze-var1.mp4" type="video/mp4"></video><span class="belt-cap"><b>Point Maze</b><i style="--dc:#9a86c9">MiniArcade</i></span></div>
+					<div class="belt-tile" data-task="pygame-whirlpool"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/pygame-whirlpool.mp4" type="video/mp4"></video><span class="belt-cap"><b>Whirlpool</b><i style="--dc:#9a86c9">MiniArcade</i></span></div>
+					<div class="belt-tile" data-task="pygame-highway"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/pygame-highway.mp4" type="video/mp4"></video><span class="belt-cap"><b>Highway</b><i style="--dc:#9a86c9">MiniArcade</i></span></div>
+					<div class="belt-tile" data-task="pygame-rocket-collect"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/pygame-rocket-collect.mp4" type="video/mp4"></video><span class="belt-cap"><b>Rocket Collect</b><i style="--dc:#9a86c9">MiniArcade</i></span></div>
+					<div class="belt-tile" data-task="pygame-spaceship"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/pygame-spaceship.mp4" type="video/mp4"></video><span class="belt-cap"><b>Spaceship</b><i style="--dc:#9a86c9">MiniArcade</i></span></div>
+				</div>
+				<div class="belt-row" data-row="1">
+					<div class="belt-tile" data-task="cheetah-run"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/cheetah-run.mp4" type="video/mp4"></video><span class="belt-cap"><b>Cheetah Run</b><i style="--dc:#5b86c4">DMControl</i></span></div>
+					<div class="belt-tile" data-task="og-point-maze"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/og-point-maze.mp4" type="video/mp4"></video><span class="belt-cap"><b>Point Maze</b><i style="--dc:#9a9a9a">OGBench</i></span></div>
+					<div class="belt-tile" data-task="rd-open-slide"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/rd-open-slide.mp4" type="video/mp4"></video><span class="belt-cap"><b>Open Slide</b><i style="--dc:#e09acf">RoboDesk</i></span></div>
+					<div class="belt-tile" data-task="bipedal-walker-hills"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/bipedal-walker-hills.mp4" type="video/mp4"></video><span class="belt-cap"><b>Bipedal Walker Hills</b><i style="--dc:#a08a76">Box2D</i></span></div>
+					<div class="belt-tile" data-task="pygame-coinrun"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/pygame-coinrun.mp4" type="video/mp4"></video><span class="belt-cap"><b>Coinrun</b><i style="--dc:#9a86c9">MiniArcade</i></span></div>
+					<div class="belt-tile" data-task="mw-window-close"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/mw-window-close.mp4" type="video/mp4"></video><span class="belt-cap"><b>Window Close</b><i style="--dc:#d05a5e">Meta-World</i></span></div>
+					<div class="belt-tile" data-task="atari-ms-pacman"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/atari-ms-pacman.mp4" type="video/mp4"></video><span class="belt-cap"><b>Ms. Pac-Man</b><i style="--dc:#c9b48c">Atari</i></span></div>
+					<div class="belt-tile" data-task="mujoco-ant"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/mujoco-ant.mp4" type="video/mp4"></video><span class="belt-cap"><b>Ant</b><i style="--dc:#5fb87a">MuJoCo</i></span></div>
+					<div class="belt-tile" data-task="ms-hopper-hop"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/ms-hopper-hop.mp4" type="video/mp4"></video><span class="belt-cap"><b>Hopper Hop</b><i style="--dc:#e3936a">ManiSkill3</i></span></div>
+					<div class="belt-tile" data-task="walker-run"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/walker-run.mp4" type="video/mp4"></video><span class="belt-cap"><b>Walker Run</b><i style="--dc:#5b86c4">DMControl</i></span></div>
+					<div class="belt-tile" data-task="og-point-spiral"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/og-point-spiral.mp4" type="video/mp4"></video><span class="belt-cap"><b>Point Spiral</b><i style="--dc:#9a9a9a">OGBench</i></span></div>
+					<div class="belt-tile" data-task="pygame-dungeon-explorer1"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/pygame-dungeon-explorer1.mp4" type="video/mp4"></video><span class="belt-cap"><b>Dungeon Explorer 1</b><i style="--dc:#9a86c9">MiniArcade</i></span></div>
+					<div class="belt-tile" data-task="mw-soccer"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/mw-soccer.mp4" type="video/mp4"></video><span class="belt-cap"><b>Soccer</b><i style="--dc:#d05a5e">Meta-World</i></span></div>
+					<div class="belt-tile" data-task="reacher-hard"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/reacher-hard.mp4" type="video/mp4"></video><span class="belt-cap"><b>Reacher Hard</b><i style="--dc:#5b86c4">DMControl</i></span></div>
+					<div class="belt-tile" data-task="finger-turn-hard"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/finger-turn-hard.mp4" type="video/mp4"></video><span class="belt-cap"><b>Finger Turn Hard</b><i style="--dc:#5b86c4">DMControl</i></span></div>
+					<div class="belt-tile" data-task="cup-catch"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/cup-catch.mp4" type="video/mp4"></video><span class="belt-cap"><b>Cup Catch</b><i style="--dc:#5b86c4">DMControl</i></span></div>
+					<div class="belt-tile" data-task="cartpole-swingup"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/cartpole-swingup.mp4" type="video/mp4"></video><span class="belt-cap"><b>Cartpole Swingup</b><i style="--dc:#5b86c4">DMControl</i></span></div>
+					<div class="belt-tile" data-task="pygame-landing"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/pygame-landing.mp4" type="video/mp4"></video><span class="belt-cap"><b>Landing</b><i style="--dc:#9a86c9">MiniArcade</i></span></div>
+					<div class="belt-tile" data-task="pygame-air-hockey"><video data-lazy loop muted playsinline preload="none"><source data-src="videos/teaser/pygame-air-hockey.mp4" type="video/mp4"></video><span class="belt-cap"><b>Air Hockey</b><i style="--dc:#9a86c9">MiniArcade</i></span></div>
+				</div>
+			</div>
+			<div class="wrap-wide">
+				<p class="band-note">MMBench2 includes 210 tasks spanning 10 domains. Tasks include locomotion, manipulation, navigation, arcade-style environments, and more. All clips are generated by our 350M-parameter base model trained on MMBench2. If you look closely, you may notice occasional hallucinations. <span class="hint hint--inset"><span class="hint-arrow">&#8596;&#xFE0E;</span> drag to explore</span></p>
+			</div>
+		</div>
+	</div>
+
+	<section class="act act--light" style="padding-top:48px;">
+		<div class="wrap">
+			<p class="prose reveal">The corpus contains an equal number of trajectories per task but is imbalanced in terms of <span class="italic">frames</span>. Episode lengths range from 25 (ManiSkill3) to 1,000 (Atari) steps, so the frame distribution is heavy-tailed. That non-uniformity is exactly the coverage structure we set out to study.</p>
+		</div>
+		<div class="wrap-wide">
+			<figure class="datachart reveal d1" id="frameChart" role="img" aria-label="Per-task frame-count distribution across the 210 tasks: a heavy-tailed, log-scale bar chart sorted high to low and colored by domain.">
+				<div class="dc-plot"></div>
+				<figcaption class="dc-legend"></figcaption>
+			</figure>
+			<p class="chart-note">Per-task frame counts across all 210 tasks, sorted high&rarr;low and colored by domain (log scale). <span class="hint">Hover any bar for the task</span>; the dashed line marks the per-task median of 65,260 frames.</p>
+		</div>
+	</section>
+
+	<!-- ===================================================================
+	     ACT 3 — THE WORLD MODEL
+	     =================================================================== -->
+	<section class="act act--tint" id="model" data-nav="Model">
+		<div class="wrap">
+			<h2 class="reveal">Building a generative world model</h2>
+			<p class="lead reveal d1">On MMBench2 we train a 350M-parameter world model that largely follows the Dreamer&nbsp;4 recipe. It consists of a video tokenizer, an action-conditioned dynamics model, and a video decoder. Any of its three components can fail <span class="italic">independently</span>, resulting in hallucination.</p>
+		</div>
+
+		<div class="wrap-wide">
+			<div class="scrolly scrolly--arch">
+				<!-- sticky full-width architecture figure: Dynamics on top, Encoder & Decoder beneath -->
+				<div class="scrolly__viz">
+					<div class="wmd">
+						<!-- action input: animated key-press, mirroring the interactive interface -->
+						<div class="wmd-keys" aria-hidden="true">
+							<span class="wmd-keys-lbl">action</span>
+							<div class="wmd-keygrid">
+								<span></span><span class="wmd-key wmd-key--up"><i class="fa fa-arrow-up"></i></span><span></span>
+								<span class="wmd-key wmd-key--left"><i class="fa fa-arrow-left"></i></span><span class="wmd-key wmd-key--down"><i class="fa fa-arrow-down"></i></span><span class="wmd-key wmd-key--right"><i class="fa fa-arrow-right"></i></span>
+							</div>
+						</div>
+						<svg viewBox="0 0 720 206" role="img" aria-label="World model diagram: an input frame is encoded to a continuous latent z, advanced by a dynamics model conditioned on the action to a next latent, and decoded back to an output frame.">
+							<defs>
+								<marker id="wmHead" markerWidth="7" markerHeight="7" refX="5.5" refY="3" orient="auto" markerUnits="strokeWidth">
+									<path d="M0,0 L6,3 L0,6 Z" fill="#8a5fb0"></path>
+								</marker>
+							</defs>
+
+							<!-- action conditioning into dynamics; a pulse rides this arrow in time with the key taps -->
+							<line class="wmd-arrow wmd-arrow--action" x1="360" y1="6" x2="360" y2="30" marker-end="url(#wmHead)"></line>
+							<circle class="wmd-action-pulse" cx="360" cy="8" r="2.6"></circle>
+
+							<!-- input frame: looping ground-truth observation -->
+							<foreignObject x="24" y="42" width="48" height="48">
+								<video class="wmd-frame-vid" data-lazy loop muted playsinline preload="none"><source data-src="videos/rollouts/cup-catch-good_gt.mp4" type="video/mp4"></video>
+							</foreignObject>
+							<rect class="wmd-frame-bd" x="24" y="42" width="48" height="48" rx="8"></rect>
+							<text class="wmd-cap-lbl" x="48" y="102" text-anchor="middle" font-size="10">frame</text>
+							<line class="wmd-arrow" x1="72" y1="66" x2="116" y2="66" marker-end="url(#wmHead)"></line>
+
+							<!-- encoder -->
+							<g class="wmd-blk stage-box" data-stage-id="enc">
+								<rect x="120" y="40" width="96" height="52" rx="10"></rect>
+								<text x="168" y="63" text-anchor="middle" font-size="14" font-weight="600">Encoder</text>
+								<text class="wmd-sub" x="168" y="80" text-anchor="middle">tokenizer</text>
+							</g>
+							<text class="wmd-flowlbl" x="249" y="58" text-anchor="middle" font-size="13">z</text>
+							<line class="wmd-arrow" x1="216" y1="66" x2="282" y2="66" marker-end="url(#wmHead)"></line>
+
+							<!-- dynamics -->
+							<g class="wmd-blk stage-box" data-stage-id="dyn">
+								<rect x="284" y="30" width="152" height="72" rx="10"></rect>
+								<text x="360" y="62" text-anchor="middle" font-size="14" font-weight="600">Dynamics</text>
+								<text class="wmd-sub" x="360" y="80" text-anchor="middle">block-causal Transformer</text>
+							</g>
+							<text class="wmd-flowlbl" x="469" y="58" text-anchor="middle" font-size="13">&#7825;</text>
+							<line class="wmd-arrow" x1="436" y1="66" x2="502" y2="66" marker-end="url(#wmHead)"></line>
+
+							<!-- decoder -->
+							<g class="wmd-blk stage-box" data-stage-id="dec">
+								<rect x="504" y="40" width="96" height="52" rx="10"></rect>
+								<text x="552" y="63" text-anchor="middle" font-size="14" font-weight="600">Decoder</text>
+								<text class="wmd-sub" x="552" y="80" text-anchor="middle">renderer</text>
+							</g>
+							<line class="wmd-arrow" x1="600" y1="66" x2="644" y2="66" marker-end="url(#wmHead)"></line>
+
+							<!-- output frame: the world model's rendered (imagined) frame -->
+							<foreignObject x="648" y="42" width="48" height="48">
+								<video class="wmd-frame-vid" data-lazy loop muted playsinline preload="none"><source data-src="videos/rollouts/cup-catch-good_wm.mp4" type="video/mp4"></video>
+							</foreignObject>
+							<rect class="wmd-frame-bd" x="648" y="42" width="48" height="48" rx="8"></rect>
+							<text class="wmd-cap-lbl" x="672" y="102" text-anchor="middle" font-size="10">frame&#8242;</text>
+
+							<!-- callout: a vertical line drops from the active block to the card directly beneath it -->
+							<line class="wmd-conn stage-box" data-stage-id="enc" x1="168" y1="92" x2="168" y2="206"></line>
+							<line class="wmd-conn stage-box" data-stage-id="dyn" x1="360" y1="102" x2="360" y2="206"></line>
+							<line class="wmd-conn stage-box" data-stage-id="dec" x1="552" y1="92" x2="552" y2="206"></line>
+						</svg>
+
+						<!-- mobile-only vertical flow: the wide horizontal SVG above is illegible when
+						     scaled to phone width, so below ~620px we hide it and show this reflow. Same
+						     stages, stacked top-to-bottom; the bookend frame videos mirror the SVG ones
+						     (only the visible copy lazy-loads). -->
+						<div class="wmd-flow-m" aria-hidden="true">
+							<div class="wfm-frame">
+								<video class="wmd-frame-vid" data-lazy loop muted playsinline preload="none"><source data-src="videos/rollouts/cup-catch-good_gt.mp4" type="video/mp4"></video>
+								<span class="wfm-flabel">frame</span>
+							</div>
+							<div class="wfm-arrow"><i class="fa fa-arrow-down"></i></div>
+							<div class="wfm-stage" data-stage="enc">
+								<span class="wfm-name">Encoder</span>
+								<span class="wfm-sub">tokenizer</span>
+							</div>
+							<div class="wfm-arrow"><span class="wfm-z">z</span><i class="fa fa-arrow-down"></i></div>
+							<div class="wfm-stage wfm-stage--dyn" data-stage="dyn">
+								<div class="wfm-action">
+									<span class="wfm-action-lbl">action</span>
+									<span class="wfm-keys">
+										<span class="wfm-key wfm-key--up"><i class="fa fa-arrow-up"></i></span>
+										<span class="wfm-key wfm-key--left"><i class="fa fa-arrow-left"></i></span>
+										<span class="wfm-key wfm-key--down"><i class="fa fa-arrow-down"></i></span>
+										<span class="wfm-key wfm-key--right"><i class="fa fa-arrow-right"></i></span>
+									</span>
+								</div>
+								<span class="wfm-name">Dynamics</span>
+								<span class="wfm-sub">block-causal Transformer</span>
+							</div>
+							<div class="wfm-arrow"><span class="wfm-z">&#7825;</span><i class="fa fa-arrow-down"></i></div>
+							<div class="wfm-stage" data-stage="dec">
+								<span class="wfm-name">Decoder</span>
+								<span class="wfm-sub">renderer</span>
+							</div>
+							<div class="wfm-arrow"><i class="fa fa-arrow-down"></i></div>
+							<div class="wfm-frame">
+								<video class="wmd-frame-vid" data-lazy loop muted playsinline preload="none"><source data-src="videos/rollouts/cup-catch-good_wm.mp4" type="video/mp4"></video>
+								<span class="wfm-flabel">frame&#8242;</span>
+							</div>
+						</div>
+
+						<!-- text card below the diagram; content swaps with the active stage -->
+						<div class="wmd-caps">
+							<div class="wmd-cap wmd-cap--enc stage-box" data-stage-id="enc">
+								<div class="wmd-cap-tag">Encoder &middot; 50M params</div>
+								<p>A video tokenizer encodes each frame into a continuous latent code <span class="italic">z</span>, trained jointly with the decoder via masked autoencoding.</p>
+							</div>
+							<div class="wmd-cap wmd-cap--dyn stage-box" data-stage-id="dyn">
+								<div class="wmd-cap-tag">Dynamics &middot; 250M params</div>
+								<p>A block-causal Transformer predicts the next latent from past latents and an action token, trained with shortcut flow-matching. Encoder and decoder are frozen during dynamics training.</p>
+							</div>
+							<div class="wmd-cap wmd-cap--dec stage-box" data-stage-id="dec">
+								<div class="wmd-cap-tag">Decoder &middot; 50M params</div>
+								<p>A decoder renders latent codes back to pixels. The decoder is used for supervision during tokenizer training, and human viewing at test-time.</p>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- bare scroll-steps drive which stage is active (one at a time) -->
+				<div class="scrolly__steps scrolly__steps--bare" aria-hidden="true">
+					<div class="step" data-stage="enc"></div>
+					<div class="step" data-stage="dyn"></div>
+					<div class="step" data-stage="dec"></div>
+					<div class="step" data-stage="dec"></div>
+				</div>
+			</div>
+		</div>
+
+		<div class="wrap">
+			<p class="prose reveal flow">Because the stages compose sequentially, a hallucination introduced early (<span class="italic">e.g.</span> a corrupted encoding) is propagated and amplified by everything downstream. Naming <span class="italic">which</span> stage produced a failure is therefore the first step to fixing it.</p>
+		</div>
+	</section>
+
+	<!-- ===================================================================
+	     ACT 4 — THREE MODES OF HALLUCINATION  (INTERACTIVE CENTERPIECE)
+	     =================================================================== -->
+	<section class="act act--dark" id="hallucination" data-nav="Hallucination" style="padding-bottom:40px;">
+		<div class="wrap">
+			<h2 class="reveal">Three modes of hallucination</h2>
+			<p class="lead reveal d1">We identify three types of hallucination, each of which trace to specific components of the world model. In the following, we contrast stable predictions (<span style="color:#6cc596;">&check;</span>) with each type of hallucination (<span style="color:#e3a6e8;">&times;</span>).</p>
+		</div>
+
+		<div class="wrap-wide">
+			<div class="mode-block reveal">
+				<div class="mode-block__head">
+					<span class="mode-num">i</span>
+					<div class="mode-block__titles">
+						<div class="stage-tag">Tokenizer</div>
+						<h3>Perceptual</h3>
+					</div>
+				</div>
+				<p class="mode-lead">Surprisingly, the world model can hallucinate before any dynamics prediction at all. When the encoder/decoder is presented with an unseen observation, it may sometimes snap that unfamiliar structure onto the nearest scene it knows; for example, dropping a small object or even reconstructing an <span class="italic">unseen</span> maze as a <span class="italic">seen</span> one.</p>
+			<div class="rt-panel" data-ex="cupcatch">
+				<div class="fig-label">Pick a task, watch encode &rarr; decode</div>
+				<div class="rt-tabs" role="tablist" aria-label="Choose a round-trip example">
+					<button type="button" class="rt-tab is-on" role="tab" aria-selected="true" data-ex="cupcatch">Cup Catch</button>
+					<button type="button" class="rt-tab" role="tab" aria-selected="false" data-ex="pong">Pong</button>
+					<button type="button" class="rt-tab" role="tab" aria-selected="false" data-ex="pmaze">Point Maze</button>
+						<button type="button" class="rt-tab" role="tab" aria-selected="false" data-ex="reacher">Reacher</button>
+				</div>
+				<div class="rt-flow">
+					<div class="rt-frame rt-frame--in">
+						<span class="rt-tag">input</span>
+						<img class="rt-img is-on" data-ex="cupcatch" src="images/perceptual/cupcatch_input.png" alt="input frame">
+						<img class="rt-img" data-ex="pong" src="images/perceptual/pong_input.png" alt="input frame">
+						<img class="rt-img" data-ex="pmaze" src="images/perceptual/pmaze_input.png" alt="input frame">
+							<img class="rt-img" data-ex="reacher" src="images/perceptual/reacher_input.png" alt="input frame">
+					</div>
+					<div class="rt-spine pipeline dimmable"><svg viewBox="0 0 300 140" role="img" aria-label="Encoder to decoder round-trip"><defs><marker id="arrow-rt" markerWidth="8" markerHeight="8" refX="5.5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 Z" fill="#a87fd0"></path></marker></defs><line class="pipe-arrow" x1="0" y1="70" x2="40" y2="70" marker-end="url(#arrow-rt)"></line><g class="stage-box is-active"><rect x="40" y="40" width="88" height="60" rx="11"></rect><text x="84" y="67" text-anchor="middle" font-size="15" font-weight="600">Encoder</text><text class="stage-sub" x="84" y="85" text-anchor="middle">tokenizer</text></g><text class="flow-lbl" x="150" y="64" text-anchor="middle" font-size="17">z</text><line class="pipe-arrow" x1="128" y1="70" x2="172" y2="70" marker-end="url(#arrow-rt)"></line><g class="stage-box is-active"><rect x="172" y="40" width="88" height="60" rx="11"></rect><text x="216" y="67" text-anchor="middle" font-size="15" font-weight="600">Decoder</text><text class="stage-sub" x="216" y="85" text-anchor="middle">renderer</text></g><line class="pipe-arrow" x1="260" y1="70" x2="300" y2="70" marker-end="url(#arrow-rt)"></line></svg></div>
+					<div class="rt-frame rt-frame--out">
+						<span class="rt-tag wm">decoded</span>
+						<img class="rt-img is-on" data-ex="cupcatch" src="images/perceptual/cupcatch_decoded.png" alt="decoded frame">
+						<img class="rt-img" data-ex="pong" src="images/perceptual/pong_decoded.png" alt="decoded frame">
+						<img class="rt-img" data-ex="pmaze" src="images/perceptual/pmaze_decoded.png" alt="decoded frame">
+							<img class="rt-img" data-ex="reacher" src="images/perceptual/reacher_decoded.png" alt="decoded frame">
+					</div>
+				</div>
+				<div class="rt-verdicts">
+					<div class="rt-verdict ok is-on" data-ex="cupcatch"><span class="fig-verdict ok">&check;</span>The decoded frame matches the input</div>
+					<div class="rt-verdict fail" data-ex="pong"><span class="fig-verdict fail">&times;</span>The ball position is not reconstructed</div>
+					<div class="rt-verdict fail" data-ex="pmaze"><span class="fig-verdict fail">&times;</span>Unseen maze rebuilt with a different, <i>seen</i> layout</div>
+						<div class="rt-verdict fail" data-ex="reacher"><span class="fig-verdict fail">&times;</span>Unseen visuals are decoded poorly</div>
+				</div>
+			</div>
+		</div>
+		<div class="mode-block reveal">
+			<div class="mode-block__head">
+				<span class="mode-num">ii</span>
+					<div class="mode-block__titles">
+						<div class="stage-tag">Dynamics</div>
+						<h3>Action marginalization</h3>
+					</div>
+				</div>
+				<p class="mode-lead">For a dynamics model to be useful for decision-making, it needs to respond to actions reliably: a different action should lead to a different outcome. If the training data has limited action diversity, the world model is likely to <span class="italic">marginalize</span> over actions, <span class="italic">i.e</span>, generating the same trajectory regardless of the action.</p>
+				<div class="am-panel" data-task="parena">
+					<div class="fig-label">Do imagined rollouts reflect the actions taken?</div>
+					<div class="rt-tabs am-tabs" role="tablist" aria-label="Choose a task">
+						<button type="button" class="rt-tab is-on" role="tab" aria-selected="true" data-task="parena">Point Arena</button>
+						<button type="button" class="rt-tab" role="tab" aria-selected="false" data-task="pickplace">Pick &amp; Place</button>
+						<button type="button" class="rt-tab" role="tab" aria-selected="false" data-task="highway">Highway</button>
+						<button type="button" class="rt-tab" role="tab" aria-selected="false" data-task="walker">Walker</button>
+						<button type="button" class="rt-tab" role="tab" aria-selected="false" data-task="mjwalker">MuJoCo Walker</button>
+						<!-- KEPT ASIDE (dormant alt marginalization example, 2026-06-18): bipedal-walker-rugged
+						     clips are in videos/_realvs/bipedal-walker-rugged_{real,zero,flip}.mp4 (scratch, gitignored). To swap in, copy them into the tracked videos/realvs/ and reference videos/realvs/... (underscore dirs 404 live: gitignored + dropped by GitHub Pages/Jekyll);
+						     add a tab + 3 am-vid (data-task="biped") + a fail verdict mirroring mjwalker; for the
+						     animated keyboard add "biped" to KEYTASKS in main.js + its trace to data/am_actions.js. -->
+					</div>
+					<div class="am-flow">
+						<figure class="am-cell">
+							<div class="am-stage">
+								<span class="am-tag is-default">real</span>
+								<span class="am-tag is-dir">hold &larr;</span>
+								<video class="am-vid is-on" data-task="parena" data-state="real" data-lazy loop muted playsinline><source data-src="videos/realvs/og-point-arena_left.mp4" type="video/mp4"></video>
+								<video class="am-vid" data-task="pickplace" data-state="real" data-lazy loop muted playsinline><source data-src="videos/realvs/mw-pick-place_left.mp4" type="video/mp4"></video>
+								<video class="am-vid" data-task="highway" data-state="real" data-lazy loop muted playsinline><source data-src="videos/realvs/pygame-highway_left.mp4" type="video/mp4"></video>
+								<video class="am-vid" data-task="walker" data-state="real" data-lazy loop muted playsinline><source data-src="videos/realvs/walker-run_real.mp4" type="video/mp4"></video>
+								<video class="am-vid" data-task="mjwalker" data-state="real" data-lazy loop muted playsinline><source data-src="videos/realvs/mujoco-walker_real.mp4" type="video/mp4"></video>
+							</div>
+							<figcaption class="am-cap is-default"><b>Real</b><span>the agent&rsquo;s actual command</span></figcaption>
+							<figcaption class="am-cap is-dir"><b>Hold &larr;</b><span>command pinned left</span></figcaption>
+							<div class="am-keys is-default" aria-hidden="true">
+								<span></span><span class="am-key is-held"><i class="fa fa-arrow-up"></i></span><span></span>
+								<span class="am-key is-held"><i class="fa fa-arrow-left"></i></span><span class="am-key"><i class="fa fa-arrow-down"></i></span><span class="am-key"><i class="fa fa-arrow-right"></i></span>
+							</div>
+							<div class="am-keys is-dir" aria-hidden="true">
+								<span></span><span class="am-key"><i class="fa fa-arrow-up"></i></span><span></span>
+								<span class="am-key is-held"><i class="fa fa-arrow-left"></i></span><span class="am-key"><i class="fa fa-arrow-down"></i></span><span class="am-key"><i class="fa fa-arrow-right"></i></span>
+							</div>
+							<div class="am-keys is-walker" aria-hidden="true" data-state="real">
+								<span></span><span class="am-key" data-key="up"><i class="fa fa-arrow-up"></i></span><span></span>
+								<span class="am-key" data-key="left"><i class="fa fa-arrow-left"></i></span><span class="am-key" data-key="down"><i class="fa fa-arrow-down"></i></span><span class="am-key" data-key="right"><i class="fa fa-arrow-right"></i></span>
+							</div>
+						</figure>
+						<figure class="am-cell">
+							<div class="am-stage">
+								<span class="am-tag is-default">none</span>
+								<span class="am-tag is-dir">none</span>
+								<video class="am-vid is-on" data-task="parena" data-state="zero" data-lazy loop muted playsinline><source data-src="videos/realvs/og-point-arena_none.mp4" type="video/mp4"></video>
+								<video class="am-vid" data-task="pickplace" data-state="zero" data-lazy loop muted playsinline><source data-src="videos/realvs/mw-pick-place_none.mp4" type="video/mp4"></video>
+								<video class="am-vid" data-task="highway" data-state="zero" data-lazy loop muted playsinline><source data-src="videos/realvs/pygame-highway_none.mp4" type="video/mp4"></video>
+								<video class="am-vid" data-task="walker" data-state="zero" data-lazy loop muted playsinline><source data-src="videos/realvs/walker-run_zero.mp4" type="video/mp4"></video>
+								<video class="am-vid" data-task="mjwalker" data-state="zero" data-lazy loop muted playsinline><source data-src="videos/realvs/mujoco-walker_zero.mp4" type="video/mp4"></video>
+							</div>
+							<figcaption class="am-cap is-default"><b>None</b><span>no command sent</span></figcaption>
+							<figcaption class="am-cap is-dir"><b>None</b><span>no command sent</span></figcaption>
+							<div class="am-keys" aria-hidden="true">
+								<span></span><span class="am-key"><i class="fa fa-arrow-up"></i></span><span></span>
+								<span class="am-key"><i class="fa fa-arrow-left"></i></span><span class="am-key"><i class="fa fa-arrow-down"></i></span><span class="am-key"><i class="fa fa-arrow-right"></i></span>
+							</div>
+						</figure>
+						<figure class="am-cell">
+							<div class="am-stage">
+								<span class="am-tag is-default">flipped</span>
+								<span class="am-tag is-dir">hold &rarr;</span>
+								<video class="am-vid is-on" data-task="parena" data-state="flip" data-lazy loop muted playsinline><source data-src="videos/realvs/og-point-arena_right.mp4" type="video/mp4"></video>
+								<video class="am-vid" data-task="pickplace" data-state="flip" data-lazy loop muted playsinline><source data-src="videos/realvs/mw-pick-place_right.mp4" type="video/mp4"></video>
+								<video class="am-vid" data-task="highway" data-state="flip" data-lazy loop muted playsinline><source data-src="videos/realvs/pygame-highway_right.mp4" type="video/mp4"></video>
+								<video class="am-vid" data-task="walker" data-state="flip" data-lazy loop muted playsinline><source data-src="videos/realvs/walker-run_flip.mp4" type="video/mp4"></video>
+								<video class="am-vid" data-task="mjwalker" data-state="flip" data-lazy loop muted playsinline><source data-src="videos/realvs/mujoco-walker_flip.mp4" type="video/mp4"></video>
+							</div>
+							<figcaption class="am-cap is-default"><b>Flipped</b><span>action inverted</span></figcaption>
+							<figcaption class="am-cap is-dir"><b>Hold &rarr;</b><span>command pinned right</span></figcaption>
+							<div class="am-keys is-default" aria-hidden="true">
+								<span></span><span class="am-key"><i class="fa fa-arrow-up"></i></span><span></span>
+								<span class="am-key"><i class="fa fa-arrow-left"></i></span><span class="am-key is-held"><i class="fa fa-arrow-down"></i></span><span class="am-key is-held"><i class="fa fa-arrow-right"></i></span>
+							</div>
+							<div class="am-keys is-dir" aria-hidden="true">
+								<span></span><span class="am-key"><i class="fa fa-arrow-up"></i></span><span></span>
+								<span class="am-key"><i class="fa fa-arrow-left"></i></span><span class="am-key"><i class="fa fa-arrow-down"></i></span><span class="am-key is-held"><i class="fa fa-arrow-right"></i></span>
+							</div>
+							<div class="am-keys is-walker" aria-hidden="true" data-state="flip">
+								<span></span><span class="am-key" data-key="up"><i class="fa fa-arrow-up"></i></span><span></span>
+								<span class="am-key" data-key="left"><i class="fa fa-arrow-left"></i></span><span class="am-key" data-key="down"><i class="fa fa-arrow-down"></i></span><span class="am-key" data-key="right"><i class="fa fa-arrow-right"></i></span>
+							</div>
+						</figure>
+					</div>
+					<div class="rt-verdicts am-verdicts">
+						<div class="rt-verdict ok is-on" data-task="parena"><span class="fig-verdict ok">&check;</span>Action-aware: the agent follows the command</div>
+						<div class="rt-verdict ok" data-task="pickplace"><span class="fig-verdict ok">&check;</span>Action-aware: the agent follows the command</div>
+						<div class="rt-verdict fail" data-task="highway"><span class="fig-verdict fail">&times;</span>Marginalized: steers with &larr;&nbsp;/&nbsp;&rarr; but also moves without a command</div>
+						<div class="rt-verdict fail" data-task="walker"><span class="fig-verdict fail">&times;</span>Marginalized: inverting actions has little effect on gait</div>
+						<div class="rt-verdict fail" data-task="mjwalker"><span class="fig-verdict fail">&times;</span>Marginalized: gait is identical regardless of action</div>
+					</div>
+				</div>
+			</div>
+			<div class="mode-block reveal">
+				<div class="mode-block__head">
+					<span class="mode-num">iii</span>
+					<div class="mode-block__titles">
+						<div class="stage-tag">Dynamics</div>
+						<h3>Scene divergence</h3>
+					</div>
+				</div>
+				<p class="mode-lead">A world model can be expected to suffer from compounding error as rollout horizon increases. However, we find that &mdash; regardless of rollout horizon &mdash; dynamics can also diverge rather abruptly when entering low-coverage regions of the state space. This may result in the agent teleporting, penetrating walls, or objects suddenly disappearing.</p>
+				<div class="mode-figs">
+
+					<div class="fig-label">Multi-step rollout: imagined future vs. reality</div>
+					<div class="fig-row">
+						<div class="fig-cell perc">
+							<div class="perc-frame"><video data-lazy loop muted playsinline><source data-src="videos/scene/og-point-bottleneck_gt.mp4" type="video/mp4"></video><span class="perc-tag">ground truth</span></div>
+							<div class="perc-frame"><video data-lazy loop muted playsinline><source data-src="videos/scene/og-point-bottleneck_wm.mp4" type="video/mp4"></video><span class="perc-tag wm">world model</span></div>
+							<div class="fig-caption fail"><span class="fig-verdict fail">&times;</span>The agent first penetrates a wall and then teleports</div>
+						</div>
+						<div class="fig-cell perc">
+							<div class="perc-frame"><video data-lazy loop muted playsinline><source data-src="videos/scene/pygame-point-maze-var4_gt.mp4" type="video/mp4"></video><span class="perc-tag">ground truth</span></div>
+							<div class="perc-frame"><video data-lazy loop muted playsinline><source data-src="videos/scene/pygame-point-maze-var4_wm.mp4" type="video/mp4"></video><span class="perc-tag wm">world model</span></div>
+							<div class="fig-caption fail"><span class="fig-verdict fail">&times;</span>The blue velocity field disappears</div>
+						</div>
+						<div class="fig-cell perc">
+							<div class="perc-frame"><video data-lazy loop muted playsinline><source data-src="videos/scene/pygame-foraging_gt.mp4" type="video/mp4"></video><span class="perc-tag">ground truth</span></div>
+							<div class="perc-frame"><video data-lazy loop muted playsinline><source data-src="videos/scene/pygame-foraging_wm.mp4" type="video/mp4"></video><span class="perc-tag wm">world model</span></div>
+							<div class="fig-caption fail"><span class="fig-verdict fail">&times;</span>The agent gets stuck in a small region of the state space</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ===================================================================
+	     ACT 5 — DETECTING
+	     =================================================================== -->
+	<section class="act act--light" id="detection" data-nav="Detection">
+		<div class="wrap">
+			<h2 class="reveal">Predicting hallucinations</h2>
+			<p class="lead reveal d1">We find that model hallucinations can be detected at runtime. We derive <span class="italic">three</span> label-free predictors that are computable on the fly from quantities the model already produces. Based on these metrics, we can then predict and visualize exactly where hallucinations will happen.</p>
+		</div>
+
+		<!-- 01 · the predictors -->
+		<div class="wrap">
+			<div class="subhead reveal"><h3>Three hallucination metrics</h3><span class="rule"></span></div>
+			<div class="pred-cards reveal d1">
+				<div class="pred-card">
+					<div class="pc-sym">$u_r$</div>
+					<h4>Tokenizer round-trip residual</h4>
+					<div class="pc-glyph" aria-hidden="true"><svg viewBox="0 0 220 88">
+					<defs><marker id="pcgArr" markerWidth="7" markerHeight="7" refX="5.5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 Z" fill="#9a6fc4"></path></marker></defs>
+					<rect class="pcg-chip" x="8" y="10" width="30" height="22" rx="6"></rect><text class="pcg-sym" x="23" y="25" text-anchor="middle">&#7825;</text>
+					<line class="pcg-arrow" x1="40" y1="21" x2="62" y2="21" marker-end="url(#pcgArr)"></line>
+					<rect class="pcg-box" x="66" y="8" width="44" height="26" rx="7"></rect><text class="pcg-lbl" x="88" y="25" text-anchor="middle">Dec</text>
+					<line class="pcg-arrow" x1="112" y1="21" x2="134" y2="21" marker-end="url(#pcgArr)"></line>
+					<rect class="pcg-frame" x="138" y="6" width="30" height="30" rx="5"></rect>
+					<path class="pcg-arrow" d="M153,38 C153,63 138,63 116,63" fill="none" marker-end="url(#pcgArr)"></path>
+					<rect class="pcg-box" x="66" y="50" width="44" height="26" rx="7"></rect><text class="pcg-lbl" x="88" y="67" text-anchor="middle">Enc</text>
+					<line class="pcg-arrow" x1="64" y1="63" x2="42" y2="63" marker-end="url(#pcgArr)"></line>
+					<rect class="pcg-chip" x="8" y="52" width="30" height="22" rx="6"></rect><text class="pcg-sym" x="23" y="67" text-anchor="middle">z&#771;</text>
+					<text class="pcg-neq" x="23" y="46" text-anchor="middle">&#8800;</text>
+				</svg></div>
+					<p><span class="math-purple">$u_r = \lVert \hat z - \mathrm{Enc}(\mathrm{Dec}(\hat z)) \rVert$</span><br>How far a predicted latent moves when its decoded frame is re-encoded. On-manifold predictions survive the round trip; hallucinated ones drift.</p>
+				</div>
+				<div class="pred-card">
+					<div class="pc-sym">$u_f$</div>
+					<h4>Flow instability</h4>
+					<div class="pc-glyph" aria-hidden="true"><svg viewBox="0 0 220 88">
+					<line class="pcg-axis" x1="10" y1="76" x2="200" y2="76"></line>
+					<text class="pcg-end" x="105" y="86" text-anchor="middle">Euler substeps</text>
+					<path class="pcg-line-lo" d="M12,48 C24,28 34,40 46,33 C60,30 74,34 88,32 C108,31 128,31 150,31" fill="none"></path>
+					<text class="pcg-end" x="156" y="34">settles</text>
+					<path class="pcg-line-hi" d="M12,58 C22,38 32,64 44,40 C56,62 68,40 80,62 C92,40 104,62 116,42 C130,60 140,44 150,54" fill="none"></path>
+					<text class="pcg-end hi" x="156" y="57">unstable</text>
+				</svg></div>
+					<p>How much the denoiser's clean-frame prediction moves between Euler substeps. A well-conditioned step settles fast; an under-conditioned one keeps oscillating.</p>
+				</div>
+				<div class="pred-card">
+					<div class="pc-sym">$u_s$</div>
+					<h4>Inter-seed variance</h4>
+					<div class="pc-glyph" aria-hidden="true"><svg viewBox="0 0 220 88">
+					<circle class="pcg-dot" cx="26" cy="44" r="5"></circle>
+					<text class="pcg-sym" x="26" y="68" text-anchor="middle">&#7825;</text>
+					<path class="pcg-fan" d="M32,44 C76,44 120,12 152,12" fill="none"></path>
+					<path class="pcg-fan" d="M32,44 C76,44 120,33 152,33" fill="none"></path>
+					<path class="pcg-fan" d="M32,44 C76,44 120,55 152,55" fill="none"></path>
+					<path class="pcg-fan" d="M32,44 C76,44 120,76 152,76" fill="none"></path>
+					<circle class="pcg-tip" cx="152" cy="12" r="3.4"></circle><circle class="pcg-tip" cx="152" cy="33" r="3.4"></circle>
+					<circle class="pcg-tip" cx="152" cy="55" r="3.4"></circle><circle class="pcg-tip" cx="152" cy="76" r="3.4"></circle>
+					<path class="pcg-bracket" d="M168,12 L174,12 L174,76 L168,76" fill="none"></path>
+					<text class="pcg-end" x="180" y="40">seeds</text>
+					<text class="pcg-end" x="180" y="52">spread</text>
+				</svg></div>
+					<p>How much the next-latent prediction varies across independent denoising seeds. Concentrated predictions indicate a well-determined transition; dispersed ones indicate where rollouts diverge.</p>
+				</div>
+			</div>
+			<p class="sublead reveal">In practice we use dynamism-normalized variants $u^{\text{norm}} = u/m$, dividing out per-step scene motion $m$ so each hallucination predictor tracks uncertainty <span class="italic">relative to how much is happening in the scene</span>.</p>
+		</div>
+
+		<!-- 02 · the spatial evidence -->
+		<div class="wrap">
+			<div class="subhead reveal"><h3>Hallucination vs. state density</h3><span class="rule"></span></div>
+			<p class="sublead reveal d1">If we visualize hallucination as measured by our predictors (in this case tokenizer round-trip residual <span class="bold" style="color:var(--purple);">$u_r$</span>) across the state space, a pattern becomes clear: <span class="bold" style="color:var(--purple);">$u_r$</span> is high exactly where there is low <span class="bold" style="color:var(--blue);">state density</span> in the training data.</p>
+		</div>
+		<div class="wrap-wide">
+			<div class="coverage-strip reveal d1">
+				<div class="cov-task">
+					<div class="cov-name">Point Maze <span class="cov-dom">&middot; OGBench</span></div>
+					<div class="cov-imgs">
+						<figure><figcaption>trajectory</figcaption><video class="cov-vid" data-lazy loop muted playsinline preload="none" poster="images/coverage/og-point-maze_initial.png" aria-label="Point Maze expert trajectory (ground truth)"><source data-src="videos/coverage/og-point-maze_gt.mp4" type="video/mp4"></video></figure>
+						<figure><figcaption class="cl-density">density</figcaption><img src="images/coverage/og-point-maze_density.png" alt="state density"></figure>
+						<figure><figcaption class="cl-ur">$u_r$</figcaption><img src="images/coverage/og-point-maze_hallu_u_r.png" alt="round-trip residual u_r"></figure>
+					</div>
+				</div>
+				<div class="cov-task">
+					<div class="cov-name">Rocket Collect <span class="cov-dom">&middot; MiniArcade</span></div>
+					<div class="cov-imgs">
+						<figure><figcaption>trajectory</figcaption><video class="cov-vid" data-lazy loop muted playsinline preload="none" poster="images/coverage/pygame-rocket-collect_initial.png" aria-label="Rocket Collect expert trajectory (ground truth)"><source data-src="videos/coverage/pygame-rocket-collect_gt.mp4" type="video/mp4"></video></figure>
+						<figure><figcaption class="cl-density">density</figcaption><img src="images/coverage/pygame-rocket-collect_density.png" alt="state density"></figure>
+						<figure><figcaption class="cl-ur">$u_r$</figcaption><img src="images/coverage/pygame-rocket-collect_hallu_u_r.png" alt="round-trip residual u_r"></figure>
+					</div>
+				</div>
+				<div class="cov-task">
+					<div class="cov-name">Cup Catch <span class="cov-dom">&middot; DMControl</span></div>
+					<div class="cov-imgs">
+						<figure><figcaption>trajectory</figcaption><video class="cov-vid" data-lazy loop muted playsinline preload="none" poster="images/coverage/cup-catch_initial.png" aria-label="Cup Catch expert trajectory (ground truth)"><source data-src="videos/coverage/cup-catch_gt.mp4" type="video/mp4"></video></figure>
+						<figure><figcaption class="cl-density">density</figcaption><img src="images/coverage/cup-catch_density.png" alt="state density"></figure>
+						<figure><figcaption class="cl-ur">$u_r$</figcaption><img src="images/coverage/cup-catch_hallu_u_r.png" alt="round-trip residual u_r"></figure>
+					</div>
+				</div>
+				<div class="cov-task">
+					<div class="cov-name">Lunar Lander <span class="cov-dom">&middot; Box2D</span></div>
+					<div class="cov-imgs">
+						<figure><figcaption>trajectory</figcaption><video class="cov-vid" data-lazy loop muted playsinline preload="none" poster="images/coverage/lunarlander-takeoff_initial.png" aria-label="Lunar Lander expert trajectory (ground truth)"><source data-src="videos/coverage/lunarlander-takeoff_gt.mp4" type="video/mp4"></video></figure>
+						<figure><figcaption class="cl-density">density</figcaption><img src="images/coverage/lunarlander-takeoff_hallu_coverage.png" alt="state density"></figure>
+						<figure><figcaption class="cl-ur">$u_r$</figcaption><img src="images/coverage/lunarlander-takeoff_hallu_u_r.png" alt="round-trip residual u_r"></figure>
+					</div>
+				</div>
+			</div>
+			<div class="legend-row reveal">
+				<span class="lg"><span class="gl-cap" style="color:var(--blue);">state density</span><span class="gl-end">low</span><span class="gl-bar" style="background:linear-gradient(90deg,#ffffff,#083e80);"></span><span class="gl-end">high</span></span>
+				<span class="lg"><span class="gl-cap" style="color:var(--purple);">$u_r$ (hallucination)</span><span class="gl-end">low</span><span class="gl-bar" style="background:linear-gradient(90deg,#c8a2e0,#241040);"></span><span class="gl-end">high</span></span>
+			</div>
+		</div>
+
+		<!-- 03 · the quantitative evidence -->
+		<div class="wrap">
+			<div class="subhead reveal"><h3>Do these metrics predict model error?</h3><span class="rule"></span></div>
+			<p class="sublead reveal d1">Yes! Across 9k held-out sequences, each hallucination predictor tracks the realized rollout error at Spearman $\rho \approx 0.8$, without requiring any labels or additional training.</p>
+		</div>
+		<div class="wrap-wide">
+			<div class="calib reveal" id="calibChart" role="img" aria-label="Calibration scatter plots: each of the three predictors (round-trip residual, flow instability, denoising variance) versus realized rollout error, each with a Spearman correlation of about negative 0.8 against rollout delta PSNR.">
+				<div class="calib-panels"></div>
+			</div>
+			<p class="chart-note">Each point corresponds to a held-out 24-frame trajectory. <span class="hint">Hover a point</span> to trace that same sequence across all three panels. The purple curve is the median; the dashed line marks the scene-divergence threshold ($\Delta$PSNR&nbsp;=&nbsp;0).</p>
+		</div>
+
+		<!-- 04 · detection in motion (per-frame scrubber) -->
+		<div class="wrap">
+			<div class="subhead reveal"><h3>Run-time detection of hallucination</h3><span class="rule"></span></div>
+			<p class="sublead reveal d1">Perhaps most interestingly, we can also use our three metrics to detect hallucination <span class="italic">at run-time</span>. In the following, we visualize (normalized) values for each of the three predictors as a function of time. Select a rollout below and watch the predictors reach their <span class="bold" style="color:#d2545a;">hallucination threshold</span> as the rollout starts diverging. For comparison, we also include examples of rollouts where no hallucination occurs.</p>
+		</div>
+		<div class="wrap-wide">
+			<div class="scrubber reveal d1" id="detScrubber">
+				<div class="scrub-clips" role="tablist" aria-label="Choose a rollout"></div>
+				<div class="scrub-main">
+					<div class="scrub-stage-col">
+						<div class="scrub-stage ustate-green">
+							<video class="scrub-vid" muted loop playsinline preload="none" aria-label="World-model rollout"><source src="" type="video/mp4"></video>
+							<span class="scrub-verdict"><span class="vdot"></span><span class="vtext">Stable</span></span>
+							<div class="scrub-readout"><div class="ro-val">0.00&times;</div><div class="ro-lbl"></div></div>
+							<button class="scrub-play" aria-label="Play"><span class="pp"><i class="fa fa-play"></i></span></button>
+						</div>
+						<div class="scrub-timeline" aria-label="Scrub the rollout">
+							<div class="scrub-tl-track"><div class="scrub-tl-fill"></div><div class="scrub-tl-knob"></div></div>
+							<span class="scrub-tl-time">0.0s</span>
+						</div>
+						<p class="scrub-caption"></p>
+					</div>
+					<div class="scrub-chart-col">
+						<div class="scrub-plot"><svg role="img" aria-label="Per-frame predictor values relative to the hallucination threshold"></svg></div>
+						<div class="scrub-legend" aria-label="Toggle predictors"></div>
+						<p class="chart-note">Per-frame round-trip residual, flow instability, and inter-seed variance from a single autoregressive model rollout, each shown relative to their hallucination threshold.</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ===================================================================
+	     ACT 6 — COVERAGE-AWARE TRAINING
+	     =================================================================== -->
+	<section class="act act--tint" id="prevention-1" data-nav="Prevention I">
+		<div class="wrap">
+			<h2 class="reveal">Closing the gap at training time</h2>
+			<p class="lead reveal d1">If every failure mode is a coverage gap, one data-centric lever should move all three at once. We resample the existing corpus to be uniform across <span class="italic">tasks</span> rather than <span class="italic">frames</span>, upweighting under-represented tasks and improving results at no additional cost.</p>
+			<div class="barchart reveal d2">
+				<div class="bar-row">
+					<div class="bl">Rollout $\Delta$PSNR <span class="sub">(dB)</span></div>
+					<div class="bar-track diverging"><div class="bar-fill pos" data-w="44%"><span class="bar-val" style="left:calc(100% + 8px);">+0.88</span></div></div>
+				</div>
+				<div class="bar-row">
+					<div class="bl">Recon PSNR <span class="sub">(dB)</span></div>
+					<div class="bar-track diverging"><div class="bar-fill pos" data-w="22%"><span class="bar-val" style="left:calc(100% + 8px);">+0.44</span></div></div>
+				</div>
+				<div class="bar-row">
+					<div class="bl">Action-shuffle ratio</div>
+					<div class="bar-track diverging"><div class="bar-fill pos" data-w="14.5%"><span class="bar-val" style="left:calc(100% + 8px);">+0.29</span></div></div>
+				</div>
+				<div class="bar-row">
+					<div class="bl">$u_r^{\text{norm}}$ <span class="sub">(lower better)</span></div>
+					<div class="bar-track diverging"><div class="bar-fill neg" data-w="20%"><span class="bar-val" style="right:calc(100% + 8px);">&minus;0.20</span></div></div>
+				</div>
+				<div class="bar-row">
+					<div class="bl">$u_s^{\text{norm}}$ <span class="sub">(lower better)</span></div>
+					<div class="bar-track diverging"><div class="bar-fill neg" data-w="14%"><span class="bar-val" style="right:calc(100% + 8px);">&minus;0.14</span></div></div>
+				</div>
+				<div class="bar-row">
+					<div class="bl">$u_f^{\text{norm}}$ <span class="sub">(lower better)</span></div>
+					<div class="bar-track diverging"><div class="bar-fill neg" data-w="7%"><span class="bar-val" style="right:calc(100% + 8px);">&minus;0.07</span></div></div>
+				</div>
+			</div>
+			<p class="chart-note">Mean change vs. the base model on held-out trajectories across 200 tasks, applying coverage-aware training to both tokenizer and dynamics. We observe sizable improvements in model quality while all three hallucination predictors are down.</p>
+		</div>
+	</section>
+
+	<!-- ===================================================================
+	     ACT 7 — TARGETED DATA COLLECTION
+	     =================================================================== -->
+	<section class="act act--dark" id="prevention-2" data-nav="Prevention II">
+		<div class="wrap">
+			<h2 class="reveal">Hallucination-guided data collection</h2>
+			<p class="lead reveal d1">Since hallucination is found to be a data coverage gap, a simple yet effective strategy is to correct model error via targeted data collection. During live environment interaction, we roll out candidate trajectories in the world model, score them by predicted hallucination, and execute the most hallucination-prone one. This allows us to reduce model hallucination with just 50 trajectories per task collected autonomously.</p>
+		</div>
+		<div class="wrap-wide reveal d2 flow--tight">
+			<div class="triptych">
+				<div class="tri-cell"><div class="tri-label">Ground truth</div><video data-lazy loop muted playsinline><source data-src="videos/finetune/og-point-var1_gt.mp4" type="video/mp4"></video></div>
+				<div class="tri-cell"><div class="tri-label">Base model</div><video data-lazy loop muted playsinline><source data-src="videos/finetune/og-point-var1_pre.mp4" type="video/mp4"></video></div>
+				<div class="tri-cell hi"><div class="tri-label">After targeted collection</div><video data-lazy loop muted playsinline><source data-src="videos/finetune/og-point-var1_post.mp4" type="video/mp4"></video></div>
+			</div>
+			<p class="band-note">Point Maze (OGBench), an unseen layout. The base model quietly drifts to a seen layout; targeted data collection and finetuning recovers the true geometry.</p>
+			<button class="ft-more-btn reveal" id="ftMoreBtn" type="button" aria-expanded="false" aria-controls="ftMore"><span class="ft-more-label">Show more examples</span> <i class="fa fa-chevron-down" aria-hidden="true"></i></button>
+			<div class="ft-more" id="ftMore">
+				<div class="triptych">
+					<div class="tri-cell"><div class="tri-label">Ground truth</div><video data-lazy loop muted playsinline><source data-src="videos/finetune/pygame-dungeon-explorer1_gt.mp4" type="video/mp4"></video></div>
+					<div class="tri-cell"><div class="tri-label">Base model</div><video data-lazy loop muted playsinline><source data-src="videos/finetune/pygame-dungeon-explorer1_pre.mp4" type="video/mp4"></video></div>
+					<div class="tri-cell hi"><div class="tri-label">After targeted collection</div><video data-lazy loop muted playsinline><source data-src="videos/finetune/pygame-dungeon-explorer1_post.mp4" type="video/mp4"></video></div>
+				</div>
+				<p class="band-note">Dungeon Explorer (MiniArcade), an unseen transfer task. The base model drifts into a scene from a visually similar Atari game; after finetuning with just 50 trajectories the model faithfully models the dynamics of this new task.</p>
+				<div class="triptych">
+					<div class="tri-cell"><div class="tri-label">Ground truth</div><video data-lazy loop muted playsinline><source data-src="videos/finetune/cup-catch-var1_gt.mp4" type="video/mp4"></video></div>
+					<div class="tri-cell"><div class="tri-label">Base model</div><video data-lazy loop muted playsinline><source data-src="videos/finetune/cup-catch-var1_pre.mp4" type="video/mp4"></video></div>
+					<div class="tri-cell hi"><div class="tri-label">After targeted collection</div><video data-lazy loop muted playsinline><source data-src="videos/finetune/cup-catch-var1_post.mp4" type="video/mp4"></video></div>
+				</div>
+				<p class="band-note">Cup Catch (DMControl), an unseen variant. The base model hallucinates visuals seen during training; finetuning restores the correct visuals.</p>
+				<div class="triptych">
+					<div class="tri-cell"><div class="tri-label">Ground truth</div><video data-lazy loop muted playsinline><source data-src="videos/finetune/pygame-reacher-easy_gt.mp4" type="video/mp4"></video></div>
+					<div class="tri-cell"><div class="tri-label">Base model</div><video data-lazy loop muted playsinline><source data-src="videos/finetune/pygame-reacher-easy_pre.mp4" type="video/mp4"></video></div>
+					<div class="tri-cell hi"><div class="tri-label">After targeted collection</div><video data-lazy loop muted playsinline><source data-src="videos/finetune/pygame-reacher-easy_post.mp4" type="video/mp4"></video></div>
+				</div>
+				<p class="band-note">Reacher Easy (MiniArcade), an unseen task. The base model dissolves the scene entirely; finetuning restores the arm and its target but the dynamics prediction still diverges eventually.</p>
+			</div>
+		</div>
+		<div class="wrap flow">
+			<p class="lead reveal">These clips are qualitative; the finetuned model simply <span class="italic">looks</span> right. However, what matters in the end is whether a world model is good enough to <span class="italic">act</span> with. To answer this, we evaluate closed-loop planning (MPC) performance with each of 6 finetuned models, varying only the data source (the policy used to collect those 50 trajectories). If curiosity-based data collection using our proposed hallucination predictors is effective, its downstream task performance should approach privileged data collection strategies that rely on humans or expert policies.</p>
+		</div>
+		<div class="wrap flow--tight">
+			<div class="figure-caption reveal" style="color:#cfcdda;">
+				<span class="bold" style="color:#b072e0;">Adapting to 10 unseen tasks.</span> Downstream task performance (closed-loop MPC) after finetuning on 50 trajectories per task, varying only the behavior policy used for data collection. Curiosity using $u_r^{\text{norm}}$ reaches ~90% of the expert/human oracles.
+			</div>
+			<div class="barchart reveal d1">
+				<div class="bar-row">
+					<div class="bl">Random actions <span class="sub" style="color:#9a98ad;">(no model)</span></div>
+					<div class="bar-track"><div class="bar-fill solid muted hatched" data-w="30%"><span class="bar-val" style="left:calc(100% + 8px);color:#cfcdda;">0.118</span></div></div>
+				</div>
+				<div class="bar-row">
+					<div class="bl">Zero-shot transfer</div>
+					<div class="bar-track"><div class="bar-fill solid muted" data-w="71%"><span class="bar-val" style="left:calc(100% + 8px);color:#cfcdda;">0.276</span></div></div>
+				</div>
+				<div class="bar-group-title">After finetuning <span class="bgt-sub">on 50 trajectories per task, varying only data source</span></div>
+				<div class="bar-row">
+					<div class="bl">No-op policy</div>
+					<div class="bar-track"><div class="bar-fill solid muted" data-w="42%"><span class="bar-val" style="left:calc(100% + 8px);color:#cfcdda;">0.163</span></div></div>
+				</div>
+				<div class="bar-row">
+					<div class="bl">Random policy</div>
+					<div class="bar-track"><div class="bar-fill solid muted" data-w="58%"><span class="bar-val" style="left:calc(100% + 8px);color:#cfcdda;">0.228</span></div></div>
+				</div>
+				<div class="bar-row">
+					<div class="bl">Curiosity $u_r^{\text{norm}}$ <span class="sub" style="color:#9a98ad;">(ours)</span></div>
+					<div class="bar-track"><div class="bar-fill solid hi" data-w="83%"><span class="bar-val" style="left:calc(100% + 8px);color:#fff;">0.325</span></div></div>
+				</div>
+				<div class="bar-row">
+					<div class="bl">Expert policy</div>
+					<div class="bar-track"><div class="bar-fill solid muted" data-w="93%"><span class="bar-val" style="left:calc(100% + 8px);color:#cfcdda;">0.362</span></div></div>
+				</div>
+				<div class="bar-row">
+					<div class="bl">Human play</div>
+					<div class="bar-track"><div class="bar-fill solid muted" data-w="93%"><span class="bar-val" style="left:calc(100% + 8px);color:#cfcdda;">0.362</span></div></div>
+				</div>
+				<div class="bar-row">
+					<div class="bl">All sources combined</div>
+					<div class="bar-track"><div class="bar-fill solid hi" data-w="100%"><span class="bar-val" style="left:calc(100% + 8px);color:#fff;">0.390</span></div></div>
+				</div>
+			</div>
+		</div>
+		<div class="wrap flow">
+			<p class="lead reveal">Why do the data collection strategies rank the way they do? We find that it is, yet again, related to <span class="italic">coverage</span>. The figure below shows trajectories collected via each policy on a maze with a central bottleneck. Curiosity tends to target walls, which is exactly where the model has been found to hallucinate by <span class="italic">e.g.</span> penetrating.</p>
+		</div>
+		<div class="wrap-wide reveal d1 flow--tight">
+			<div class="figure-caption reveal" style="color:#cfcdda;margin-bottom:22px;max-width:880px;">
+				<span class="bold" style="color:#b072e0;">Data coverage by collection policy.</span> State density over 50 collected trajectories on Point Maze (OGBench), an H-shaped layout joined by a single bottleneck corridor. Darker cells are visited more often.
+			</div>
+			<div class="policy-strip">
+				<div class="pol-cell"><div class="pol-label">No-op</div><img src="images/datacoll/bottleneck_noop.png" alt="State density of no-op data collection: agent barely moves, almost no coverage" loading="lazy"></div>
+				<div class="pol-cell"><div class="pol-label">Random</div><img src="images/datacoll/bottleneck_random.png" alt="State density of random data collection: dense in the two chambers but rarely crosses the bottleneck" loading="lazy"></div>
+				<div class="pol-cell"><div class="pol-label">Expert $\pi$</div><img src="images/datacoll/bottleneck_expert.png" alt="State density of expert data collection: clean goal-directed paths through the bottleneck, sparse elsewhere" loading="lazy"></div>
+				<div class="pol-cell hi"><div class="pol-label">Curiosity (ours)</div><img src="images/datacoll/bottleneck_curiosity.png" alt="State density of curiosity-driven data collection: broad coverage of both chambers and the bottleneck" loading="lazy"></div>
+				<div class="pol-cell"><div class="pol-label">Human</div><img src="images/datacoll/bottleneck_human.png" alt="State density of human play data collection: dense, broad coverage everywhere" loading="lazy"></div>
+			</div>
+			<div class="policy-legend reveal"><span>less visited</span><span class="pl-bar"></span><span>more visited</span></div>
+		</div>
+		<div class="wrap flow">
+			<p class="lead reveal"><span class="bold">In summary</span>, we show that finetuning with just 50 trajectories can greatly improve world modeling in both seen and unseen tasks, and that a majority of these gains can be realized autonomously via curiosity-based exploration targeting hallucination-prone regions.</p>
+		</div>
+	</section>
+
+	<!-- ===================================================================
+	     ACT 9 — RESOURCES + RELEASE + CITE
+	     =================================================================== -->
+	<section class="act act--light" id="resources" data-nav="Resources">
+		<div class="wrap">
+			<div class="open-hero reveal">
+				<span class="open-flag-big">100% open</span>
+			</div>
+			<p class="open-lead reveal d1">To support further research on generative world modeling, we release:</p>
+			<div class="release-cards reveal d2">
+				<a class="rcard" href="https://github.com/nicklashansen/mmbench2" target="_blank" rel="noopener"><div class="ic"><i class="fa fa-github"></i></div><h4>Code</h4><p>Training and evaluation for our world models on MMBench2.</p></a>
+				<a class="rcard" href="https://huggingface.co/datasets/nicklashansen/mmbench2" target="_blank" rel="noopener"><div class="ic"><i class="fa fa-database"></i></div><h4>Dataset</h4><p>427 hours, 210 tasks, ground-truth actions and rewards, live simulators.</p></a>
+				<a class="rcard" href="https://huggingface.co/nicklashansen/mmbench2-models" target="_blank" rel="noopener"><div class="ic"><svg class="hf-ic" aria-hidden="true" focusable="false"><use href="#ico-hf"/></svg></div><h4>Models</h4><p>Pretrained and finetuned 350M-parameter models.</p></a>
+			</div>
+		</div>
+		<div class="wrap flow">
+			<h2 class="reveal">Citation</h2>
+			<p class="prose reveal d1">If you find our work useful, please consider citing the paper:</p>
+			<div class="cite-block reveal d2">
+				<button id="bibCopyBtn" class="bib-copy" type="button" aria-label="Copy BibTeX citation"><i class="fa fa-clone"></i><span class="bib-copy-label">Copy</span></button>
+				<div id="bibtex-text" class="bibtexsection" onclick="window.getSelection().selectAllChildren(document.getElementById('bibtex-text'));">
+@misc{Hansen2026Hallucination,
+	title={Hallucination in World Models is Predictable and Preventable},
+	author={Nicklas Hansen and Xiaolong Wang},
+	year={2026}
+}
+
+</div>
+			</div>
+		</div>
+		<div class="wrap flow">
+			<h2 class="reveal">References</h2>
+			<p class="prose reveal d1" style="max-width:760px;">A selection of key works this paper builds on, ordered by year. The complete bibliography is available in our <a href="paper.pdf" target="_blank" rel="noopener">paper</a>.</p>
+			<ol class="references reveal d1">
+				<li>Pathak et al. (2017). <a href="https://arxiv.org/abs/1705.05363" target="_blank" rel="noopener">Curiosity-Driven Exploration by Self-Supervised Prediction</a>. <span class="ref-venue">ICML</span>.</li>
+				<li>Lakshminarayanan et al. (2017). <a href="https://arxiv.org/abs/1612.01474" target="_blank" rel="noopener">Simple and Scalable Predictive Uncertainty Estimation using Deep Ensembles</a>. <span class="ref-venue">NeurIPS</span>.</li>
+				<li>Ha &amp; Schmidhuber (2018). <a href="https://arxiv.org/abs/1803.10122" target="_blank" rel="noopener">World Models</a>. <span class="ref-venue">NeurIPS</span>.</li>
+				<li>Hafner et al. (2020). <a href="https://arxiv.org/abs/1912.01603" target="_blank" rel="noopener">Dream to Control: Learning Behaviors by Latent Imagination</a>. <span class="ref-venue">ICLR</span>.</li>
+				<li>Sekar et al. (2020). <a href="https://arxiv.org/abs/2005.05960" target="_blank" rel="noopener">Planning to Explore via Self-Supervised World Models</a>. <span class="ref-venue">ICML</span>.</li>
+				<li>Hansen &amp; Wang (2021). <a href="https://arxiv.org/abs/2011.13389" target="_blank" rel="noopener">Generalization in Reinforcement Learning by Soft Data Augmentation</a>. <span class="ref-venue">ICRA</span>.</li>
+				<li>He et al. (2022). <a href="https://arxiv.org/abs/2111.06377" target="_blank" rel="noopener">Masked Autoencoders Are Scalable Vision Learners</a>. <span class="ref-venue">CVPR</span>.</li>
+				<li>Ji et al. (2023). <a href="https://doi.org/10.1145/3571730" target="_blank" rel="noopener">Survey of Hallucination in Natural Language Generation</a>. <span class="ref-venue">ACM Computing Surveys</span>.</li>
+				<li>Hansen, Su &amp; Wang (2024). <a href="https://arxiv.org/abs/2310.16828" target="_blank" rel="noopener">TD-MPC2: Scalable, Robust World Models for Continuous Control</a>. <span class="ref-venue">ICLR</span>.</li>
+				<li>Huang et al. (2024). <a href="https://arxiv.org/abs/2311.17982" target="_blank" rel="noopener">VBench: Comprehensive Benchmark Suite for Video Generative Models</a>. <span class="ref-venue">CVPR</span>.</li>
+				<li>Bruce et al. (2024). <a href="https://arxiv.org/abs/2402.15391" target="_blank" rel="noopener">Genie: Generative Interactive Environments</a>. <span class="ref-venue">ICML</span>.</li>
+				<li>Valevski et al. (2024). <a href="https://arxiv.org/abs/2408.14837" target="_blank" rel="noopener">Diffusion Models Are Real-Time Game Engines</a>. <span class="ref-venue">arXiv:2408.14837</span>.</li>
+				<li>Hafner, Yan &amp; Lillicrap (2025). <a href="https://arxiv.org/abs/2509.24527" target="_blank" rel="noopener">Training Agents Inside of Scalable World Models</a>. <span class="ref-venue">arXiv:2509.24527</span>.</li>
+				<li>Hansen, Su &amp; Wang (2026). <a href="https://arxiv.org/abs/2511.19584" target="_blank" rel="noopener">Learning Massively Multitask World Models for Continuous Control</a>. <span class="ref-venue">ICLR</span>.</li>
+			</ol>
+		</div>
+	</section>
+
+	<footer class="paper-foot">
+		<a class="backtop" href="#top"><i class="fa fa-arrow-up"></i>&ensp;Return to top</a>
+	</footer>
+
+	<script src="data/frame_distribution.js?v=0.1"></script>
+	<script src="data/calibration.js?v=0.2"></script>
+	<script src="data/scrubber_traces.js?v=1.8"></script>
+	<script src="data/am_actions.js?v=1.2"></script>
+	<script src="main.js?v=3.5"></script>
+</body>
+</html>
