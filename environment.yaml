@@ -1,0 +1,40 @@
+name: mmbench2
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - glew=2.1.0
+  - glib=2.86.0
+  - pip=25.2
+  - python=3.10
+  - swig
+  - box2d-py
+  - pip:
+    - dm-control==1.0.34
+    - glfw==2.10.0
+    - gymnasium==0.29.1
+    - gymnasium[atari,accept-rom-license]
+    - gymnasium[box2d]
+    - pygame==2.6.1  # required by the PyGame task domain (envs/tasks/pygame/*) and box2d env rendering
+    # - ale_py==0.10  # required for continuous-action Atari (`continuous=True` kwarg in envs/atari.py); matches the datagen Dockerfile
+    - aiohttp==3.13.3
+    - pillow==12.0.0
+    - gpustat==1.1.1
+    - ffmpeg==1.4
+    - imageio==2.37.0
+    - imageio-ffmpeg==0.6.0
+    - git+https://github.com/nicklashansen/metaworld.git
+    - mani_skill-nightly==2025.9.19.39
+    - moviepy==1.0.3
+    - mujoco==3.3.6
+    - robodesk==1.0.0
+    - ogbench==1.1.5
+    - lpips==0.1.4
+    - numpy==1.24.4
+    - tensordict==0.10.0
+    - torch==2.8.0
+    - torchvision==0.23.0
+    - torchrl==0.10.0
+    - transformers==4.56.2
+    - wandb==0.25.1
+    - huggingface_hub==0.36.2

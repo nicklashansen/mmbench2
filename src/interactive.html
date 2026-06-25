@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>MMBench2 · Interactive World Model</title>
+  <style>
+    :root {
+      --bg: #0d0d15;
+      --bg-2: #15131f;
+      --fg: #e9e9f2;
+      --muted: rgba(233, 233, 242, 0.60);
+      --purple: #75409c;
+      --purple-bright: #b072e0;
+      --purple-glow: rgba(160, 100, 230, 0.45);
+      --green: #4ade80;
+      --amber: #fbbf24;
+      --red: #ef4444;
+      --gray: rgba(180, 180, 200, 0.55);
+      --card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+      --card-border: rgba(255, 255, 255, 0.10);
+      --glass: rgba(255, 255, 255, 0.07);
+      --glass-border: rgba(255, 255, 255, 0.18);
+      --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      color: var(--fg);
+      font-family: var(--sans);
+      background:
+        radial-gradient(1100px 700px at 50% -10%, rgba(117, 64, 156, 0.22), transparent 60%),
+        linear-gradient(180deg, var(--bg-2), var(--bg) 55%);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 16px;
+    }
+
+    .head-copy {
+      text-align: center;
+      max-width: 560px;
+      margin-bottom: 16px;
+      user-select: none;
+    }
+    .head-copy h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      margin: 0 0 6px;
+    }
+    .head-copy p {
+      margin: 0;
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+    .head-copy .hl-red { color: var(--red); font-weight: 600; }
+
+    /* ---- frosted-glass demo card ---- */
+    .shell {
+      width: min(480px, 92vw);
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45), 0 0 50px rgba(160, 100, 230, 0.06);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 14px;
+    }
+
+    /* ---- header: LED + task select + controls ---- */
+    .head {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .led {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: #6b6b76;
+      flex: 0 0 auto;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .led.on {
+      background: var(--green);
+      box-shadow: 0 0 9px rgba(74, 222, 128, 0.8);
+      animation: led-pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes led-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+    .led-lbl {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      flex: 0 0 auto;
+    }
+    .task-select {
+      margin-left: auto;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      max-width: 190px;
+      color: var(--fg);
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 9px;
+      padding: 5px 9px;
+      outline: none;
+      cursor: pointer;
+    }
+    .task-select:focus { border-color: var(--purple-bright); }
+    .task-select option { color: #111; }
+
+    .ibtn {
+      width: 30px; height: 30px;
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--fg);
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 9px;
+      cursor: pointer;
+      padding: 0;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .ibtn:hover { background: rgba(255, 255, 255, 0.14); border-color: var(--purple-bright); }
+    .ibtn svg { width: 15px; height: 15px; display: block; }
+
+    /* ---- frame stage ---- */
+    .stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 13px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.30);
+      box-shadow: 0 0 0 2px var(--gray);
+      transition: box-shadow 0.35s ease;
+    }
+    .stage img.frame {
+      width: 100%; height: 100%;
+      display: block;
+      object-fit: cover;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    /* uncertainty ring: gray (stable) → amber (drift) → red (hallucinate),
+       matching the legend gradient below. */
+    .stage.ustate-calibrating { box-shadow: 0 0 0 2px rgba(180, 180, 200, 0.30); }
+    .stage.ustate-green       { box-shadow: 0 0 0 2px var(--gray); }
+    .stage.ustate-yellow      { box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.85), 0 0 24px rgba(251, 191, 36, 0.30); }
+    .stage.ustate-red         { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.92), 0 0 30px rgba(239, 68, 68, 0.40); }
+
+    /* verdict badge (top-left); only shown for drift / hallucinate */
+    .verdict {
+      position: absolute;
+      top: 9px; left: 9px;
+      z-index: 6;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.48);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+    .verdict.show { display: inline-flex; }
+    .verdict .vdot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
+
+    /* on-screen key HUD (doubles as touch controls) */
+    .hud {
+      position: absolute;
+      left: 0; right: 0; bottom: 10px;
+      z-index: 7;
+      display: flex;
+      justify-content: center;
+      gap: 22px;
+      pointer-events: none;   /* keys re-enable below */
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .shell.is-live .hud { opacity: 1; }
+    .hud-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 32px);
+      grid-auto-rows: 28px;
+      gap: 3px;
+      justify-items: center;
+      align-items: center;
+    }
+    .hud-key {
+      pointer-events: auto;
+      width: 32px; height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--fg);
+      background: rgba(10, 10, 18, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.30);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      transition: background 0.08s, border-color 0.08s, transform 0.08s, opacity 0.2s;
+      user-select: none;
+      cursor: pointer;
+    }
+    .hud-key.pressed {
+      background: var(--purple);
+      border-color: var(--purple-bright);
+      box-shadow: 0 0 14px var(--purple-glow);
+      transform: translateY(1px);
+    }
+    .hud-key.dim-off { opacity: 0.18; pointer-events: none; }
+    .hud-key svg { width: 12px; height: 12px; display: block; }
+
+    /* paused badge */
+    .paused {
+      position: absolute;
+      inset: 0;
+      z-index: 9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.32);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.12s, visibility 0s linear 0.12s;
+      pointer-events: none;
+    }
+    .paused.show { opacity: 1; visibility: visible; transition: opacity 0.12s; }
+    .paused-badge {
+      width: 66px; height: 66px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+    }
+    .paused-badge svg { width: 26px; height: 26px; }
+
+    /* connection overlay (connecting / disconnected) */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 12;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 24px;
+      text-align: center;
+      background: rgba(7, 7, 13, 0.66);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+    }
+    .overlay.show { display: flex; }
+    .overlay .msg {
+      font-size: 14px;
+      line-height: 1.55;
+      white-space: pre-line;
+      color: var(--fg);
+    }
+    .btn-primary {
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 9px 20px;
+      border-radius: 10px;
+      color: #fff;
+      background: var(--purple);
+      border: 1px solid var(--purple-bright);
+      box-shadow: 0 0 22px var(--purple-glow);
+      cursor: pointer;
+    }
+    .btn-primary:hover { background: #8049ad; }
+
+    /* footer: control hints + legend */
+    .foot {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .keys {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .keygroup { display: inline-flex; align-items: center; gap: 6px; }
+    .keycap {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--glass-border);
+      border-bottom-width: 2px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--fg);
+    }
+    .keycap svg { width: 9px; height: 9px; }
+    .touchnote { display: none; font-size: 12px; color: var(--muted); margin: 0; }
+
+    .legend {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      max-width: 320px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .legend .lbl-l { text-align: right; }
+    .legend .lbl-r { text-align: left; }
+    .legend .bar {
+      width: 130px;
+      height: 7px;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #9a9ab0 0%, #9a9ab0 8px, var(--amber) 50%, var(--red) calc(100% - 8px), var(--red) 100%);
+    }
+
+    .statusline {
+      margin-top: 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.4;
+      word-break: break-word;
+      user-select: text;
+    }
+
+    @media (max-width: 540px) {
+      .head { gap: 7px; }
+      .task-select { max-width: 150px; }
+    }
+    @media (pointer: coarse) {
+      .keys { display: none; }
+      .touchnote { display: block; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .led.on { animation: none; }
+      .stage, .hud-key, .paused { transition: none; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <div class="head-copy">
+      <h1>Live demo</h1>
+      <p>Live interaction with our 350M-parameter world model trained on 210 tasks. Control it with your keyboard! Our hallucination predictors run at every step; a <span class="hl-red">red</span> border indicates that a hallucination is detected.</p>
+    </div>
+
+    <div class="shell" id="shell">
+      <div class="head">
+        <span class="led" id="led"></span>
+        <span class="led-lbl" id="ledLbl">connecting…</span>
+        <select id="taskSelect" class="task-select" aria-label="Switch task"></select>
+        <button class="ibtn" id="btnReset" title="Reset episode (R)" aria-label="Reset episode">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+        </button>
+        <button class="ibtn" id="btnDisconnect" title="End session (Q / Esc)" aria-label="End session">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="stage" id="stage">
+        <img id="frame" class="frame" alt="Live world-model rollout"/>
+
+        <div class="verdict" id="verdict">
+          <span class="vdot" id="vdot"></span>
+          <span class="vtext" id="vtext">Drifting</span>
+        </div>
+
+        <div class="hud" id="hud" aria-hidden="true">
+          <div class="hud-grid">
+            <span></span><span class="hud-key" data-k="w" data-dim="3">W</span><span></span>
+            <span class="hud-key" data-k="a" data-dim="2">A</span>
+            <span class="hud-key" data-k="s" data-dim="3">S</span>
+            <span class="hud-key" data-k="d" data-dim="2">D</span>
+          </div>
+          <div class="hud-grid">
+            <span></span>
+            <span class="hud-key" data-k="ArrowUp" data-dim="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+            <span></span>
+            <span class="hud-key" data-k="ArrowLeft" data-dim="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></span>
+            <span class="hud-key" data-k="ArrowDown" data-dim="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span>
+            <span class="hud-key" data-k="ArrowRight" data-dim="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+
+        <div class="paused" id="paused">
+          <span class="paused-badge">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+          </span>
+        </div>
+
+        <div class="overlay" id="overlay">
+          <div class="msg" id="overlayMsg"></div>
+          <button class="btn-primary" id="btnReconnect" style="display:none">Reconnect</button>
+        </div>
+      </div>
+
+      <div class="foot">
+        <div class="keys">
+          <span class="keygroup">
+            <span class="keycap">WASD</span>
+            <span class="keycap" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </span>
+            <span>act</span>
+          </span>
+          <span class="keygroup"><span class="keycap">Space</span><span>pause</span></span>
+          <span class="keygroup"><span class="keycap">R</span><span>reset</span></span>
+        </div>
+        <p class="touchnote">Tap the on-screen keys to act, and tap the frame to pause.</p>
+
+        <div class="legend">
+          <span class="lbl-l">stable</span>
+          <span class="bar"></span>
+          <span class="lbl-r">hallucination</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="statusline" id="status">connecting…</div>
+  </div>
+
+<script>
+(function() {
+  const shellEl = document.getElementById("shell");
+  const ledEl = document.getElementById("led");
+  const ledLblEl = document.getElementById("ledLbl");
+  const statusEl = document.getElementById("status");
+  const stageEl = document.getElementById("stage");
+  const imgEl = document.getElementById("frame");
+  const pausedEl = document.getElementById("paused");
+  const verdictEl = document.getElementById("verdict");
+  const vdotEl = document.getElementById("vdot");
+  const vtextEl = document.getElementById("vtext");
+  const hudEl = document.getElementById("hud");
+  const overlayEl = document.getElementById("overlay");
+  const overlayMsgEl = document.getElementById("overlayMsg");
+  const btnReset = document.getElementById("btnReset");
+  const btnDisconnect = document.getElementById("btnDisconnect");
+  const btnReconnect = document.getElementById("btnReconnect");
+  const taskSelectEl = document.getElementById("taskSelect");
+
+  const proto = (location.protocol === "https:") ? "wss" : "ws";
+  let ws = null;
+  let gotLive = false;    // a server message arrived on this socket
+  let retryTimer = null;
+  let lastUrl = null;
+
+  const TASK_SET = __TASK_SET__;
+  const INITIAL_TASK = "__INITIAL_TASK__";
+
+  function setLed(state, label) {
+    ledEl.classList.toggle("on", state === "live");
+    ledLblEl.textContent = label;
+  }
+
+  function showOverlay(text, withButton) {
+    overlayMsgEl.textContent = text;
+    btnReconnect.style.display = withButton ? "inline-block" : "none";
+    overlayEl.classList.add("show");
+  }
+  function hideOverlay() { overlayEl.classList.remove("show"); }
+
+  function populateTasks() {
+    taskSelectEl.innerHTML = "";
+    for (const t of TASK_SET) {
+      const opt = document.createElement("option");
+      opt.value = t;
+      opt.textContent = t;
+      taskSelectEl.appendChild(opt);
+    }
+    taskSelectEl.value = INITIAL_TASK;
+  }
+
+  let pendingTask = null;
+  let pendingTaskTimer = null;
+
+  taskSelectEl.addEventListener("change", () => {
+    const t = taskSelectEl.value;
+    pendingTask = t;
+    // Watchdog: if the ack never comes (switch dropped by the server's 1s
+    // throttle, or lost), stop gating the dropdown sync. Generous because a
+    // switch re-seeds under the contended GPU lock.
+    if (pendingTaskTimer) clearTimeout(pendingTaskTimer);
+    pendingTaskTimer = setTimeout(() => {
+      if (pendingTask === t) pendingTask = null;
+    }, 10000);
+    statusEl.textContent = `switching to ${t}…`;
+    send({type: "set_task", task: t});
+  });
+
+  populateTasks();
+
+  function send(obj) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify(obj));
+  }
+
+  function setPaused(paused) {
+    pausedEl.classList.toggle("show", paused);
+    shellEl.classList.toggle("is-paused", paused);
+  }
+
+  const USTATE_CLASSES = ["ustate-calibrating", "ustate-green", "ustate-yellow", "ustate-red"];
+  const VERDICT = { yellow: "Drifting", red: "Hallucinating" };
+  function setUState(state) {
+    for (const c of USTATE_CLASSES) stageEl.classList.remove(c);
+    if (state && state !== "off") stageEl.classList.add(`ustate-${state}`);
+    const label = VERDICT[state];
+    if (label) {
+      vtextEl.textContent = label;
+      vdotEl.style.background = (state === "red") ? "var(--red)" : "var(--amber)";
+      verdictEl.classList.add("show");
+    } else {
+      verdictEl.classList.remove("show");
+    }
+  }
+
+  // act_dim → only light up the bindable keys (arrows = dims 0–1, WASD = 2–3).
+  function applyActDim(actDim) {
+    if (typeof actDim !== "number") return;
+    for (const el of hudEl.querySelectorAll(".hud-key")) {
+      const dim = parseInt(el.getAttribute("data-dim"), 10);
+      el.classList.toggle("dim-off", dim >= actDim);
+    }
+  }
+
+  function setLive(live) {
+    shellEl.classList.toggle("is-live", live);
+    hudEl.setAttribute("aria-hidden", live ? "false" : "true");
+  }
+
+  function onClosed() {
+    setPaused(false);
+    setUState("off");
+    setLive(false);
+    releaseAllKeys();
+    if (!gotLive) {
+      // Never reached a live session — the server is probably still starting
+      // up (model load) or momentarily down; retry shortly.
+      setLed("offline", "offline");
+      showOverlay("Connecting to the server…", false);
+      retryTimer = setTimeout(connect, 2000);
+      return;
+    }
+    setLed("offline", "ended");
+    statusEl.textContent = "disconnected";
+    showOverlay("Disconnected.", true);
+  }
+
+  function connect() {
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    gotLive = false;
+    pendingTask = null;
+    setLed("connecting", "connecting…");
+    showOverlay("connecting…", false);
+    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws.binaryType = "arraybuffer";
+
+    ws.onopen = () => { statusEl.textContent = "connected"; };
+    ws.onclose = onClosed;
+    ws.onerror = () => { statusEl.textContent = "connection error"; };
+
+    ws.onmessage = (ev) => {
+      if (typeof ev.data === "string") {
+        try {
+          const msg = JSON.parse(ev.data);
+          gotLive = true;
+          if (msg.type === "status") {
+            hideOverlay();
+            setLive(true);
+            setLed("live", "live");
+            const serverTask = (typeof msg.task === "string") ? msg.task : null;
+
+            // While a switch is pending, gate ONLY the dropdown sync on the
+            // ack — every other field stays live, so a dropped or slow switch
+            // can't freeze the UI.
+            if (pendingTask && serverTask === pendingTask) pendingTask = null; // ack
+            if (serverTask && !pendingTask && taskSelectEl.value !== serverTask) {
+              taskSelectEl.value = serverTask;
+            }
+            if (typeof msg.paused === "boolean") setPaused(msg.paused);
+            if (typeof msg.act_dim === "number") applyActDim(msg.act_dim);
+            if (typeof msg.text === "string") {
+              statusEl.textContent =
+                msg.text + (typeof msg.ms === "number" ? ` | ${msg.ms} ms` : "");
+            }
+            if (typeof msg.u_state === "string") setUState(msg.u_state);
+          }
+        } catch(e) {}
+        return;
+      }
+
+      const blob = new Blob([ev.data], {type: "image/jpeg"});
+      const url = URL.createObjectURL(blob);
+      imgEl.onload = () => {
+        if (lastUrl) URL.revokeObjectURL(lastUrl);
+        lastUrl = url;
+      };
+      imgEl.src = url;
+    };
+  }
+
+  // ---- key handling (physical + on-screen HUD) ----
+  const down = new Set();
+  const CAPTURE = ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight",
+                   "w","W","a","A","s","S","d","D","Space","r","R","q","Q","Escape"];
+  function keyName(e) { return (e.key === " ") ? "Space" : e.key; }
+  function shouldCapture(k) { return CAPTURE.includes(k); }
+  function hudKeysFor(k) {
+    const sel = (k.length === 1) ? k.toLowerCase() : k;
+    return hudEl.querySelectorAll(`.hud-key[data-k="${sel}"]`);
+  }
+  function pressKey(k) {
+    for (const el of hudKeysFor(k)) el.classList.add("pressed");
+    if (down.has(k)) return;
+    down.add(k);
+    send({type: "keydown", key: k});
+  }
+  function releaseKey(k) {
+    for (const el of hudKeysFor(k)) el.classList.remove("pressed");
+    if (!down.has(k)) return;
+    down.delete(k);
+    send({type: "keyup", key: k});
+  }
+  function releaseAllKeys() {
+    for (const k of Array.from(down)) send({type: "keyup", key: k});
+    down.clear();
+    for (const el of hudEl.querySelectorAll(".hud-key.pressed")) el.classList.remove("pressed");
+  }
+
+  window.addEventListener("keydown", (e) => {
+    const k = keyName(e);
+    if (!shouldCapture(k)) return;
+    e.preventDefault();
+    if (k === "Space")               { send({type: "toggle_pause"}); return; }
+    if (k === "r" || k === "R")      { send({type: "reset"}); return; }
+    if (k === "q" || k === "Q" || k === "Escape") { send({type: "disconnect"}); return; }
+    pressKey(k);
+  }, {passive: false});
+
+  window.addEventListener("keyup", (e) => {
+    const k = keyName(e);
+    if (!shouldCapture(k)) return;
+    e.preventDefault();
+    if (k === "Space" || k === "r" || k === "R" || k === "q" || k === "Q" || k === "Escape") return;
+    releaseKey(k);
+  }, {passive: false});
+
+  window.addEventListener("blur", releaseAllKeys);
+
+  // On-screen HUD: pointer events drive the same keydown/keyup as the keyboard,
+  // so the grid doubles as touch controls and as live press feedback.
+  for (const el of hudEl.querySelectorAll(".hud-key")) {
+    const k = el.getAttribute("data-k");
+    const onDown = (e) => { e.preventDefault(); e.stopPropagation(); pressKey(k); };
+    const onUp = (e) => { e.preventDefault(); e.stopPropagation(); releaseKey(k); };
+    el.addEventListener("pointerdown", onDown);
+    el.addEventListener("pointerup", onUp);
+    el.addEventListener("pointerleave", onUp);
+    el.addEventListener("pointercancel", onUp);
+  }
+
+  // Tap / click the frame (outside the HUD) to pause — matches the live demo.
+  stageEl.addEventListener("pointerdown", (e) => {
+    if (overlayEl.classList.contains("show")) return;
+    if (e.target.closest(".hud-key")) return;
+    send({type: "toggle_pause"});
+  });
+
+  btnReset.onclick = () => send({type: "reset"});
+  btnDisconnect.onclick = () => send({type: "disconnect"});
+  btnReconnect.onclick = () => connect();
+
+  connect();
+})();
+</script>
+</body>
+</html>
