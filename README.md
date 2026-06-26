@@ -12,6 +12,8 @@ This repository contains code for **training and evaluation of large generative 
 
 🕹️ **Live demo:** https://www.nicklashansen.com/mmbench2/#live-demo
 
+📄 **Paper:** https://arxiv.org/abs/2606.27326
+
 📦 **Dataset:** https://huggingface.co/datasets/nicklashansen/mmbench2
 
 🤖 **Models:** https://huggingface.co/nicklashansen/mmbench2-models
@@ -153,10 +155,11 @@ Then open `http://localhost:7860`. On a remote (headless) machine, forward the p
 If you find this work useful, please consider citing:
 
 ```
-@article{Hansen2026Hallucination,
-    title={Hallucination in World Models is Predictable and Preventable},
-    author={Nicklas Hansen and Xiaolong Wang},
-    year={2026},
+@article{hansen2026hallucination,
+  title   = {Hallucination in World Models is Predictable and Preventable},
+  author  = {Nicklas Hansen and Xiaolong Wang},
+  journal = {arXiv preprint arXiv:2606.27326},
+  year    = {2026}
 }
 ```
 
