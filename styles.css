@@ -134,7 +134,8 @@ body.paper-body {background-color: var(--paper);}
 .hero .hero-authors {color: var(--dark-muted); font-size: 1.2em; margin-bottom: 10px;}
 .hero .hero-authors a {color: var(--dark-ink);}
 .hero .hero-authors a:hover {color: var(--purple-bright);}
-.hero .hero-affil {color: var(--dark-muted); font-size: 1.02em; margin-bottom: 42px;}
+.hero .hero-affil {color: var(--dark-muted); font-size: 1.02em; margin-bottom: 18px;}
+.hero .hero-venue {color: var(--purple-bright); font-size: 1.02em; font-weight: 600; margin-bottom: 42px;}
 .hero-cta {display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px;}
 .hero-cta a.btn {box-shadow: 0 2px 14px rgba(0,0,0,0.35);}
 .hero-cta a.btn.ghost {background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.25);
