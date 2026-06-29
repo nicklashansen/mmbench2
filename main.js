@@ -1091,10 +1091,8 @@
 		var PROD = /(^|\.)nicklashansen\.com$/i.test(location.hostname);
 		// Production WebSocket endpoints (with local fallbacks for development).
 		var ENDPOINTS = PROD
-			? ['wss://watson-member-accomplished-electronic.trycloudflare.com/ws',
-			   'wss://disks-zope-country-receive.trycloudflare.com/ws',
-			   'wss://floors-pens-sue-usr.trycloudflare.com/ws']
-			: ['ws://127.0.0.1:8860/ws', 'ws://127.0.0.1:8861/ws', 'ws://127.0.0.1:8862/ws'];
+			? ['wss://robertson-violation-univ-obtained.trycloudflare.com/ws']
+			: ['ws://127.0.0.1:8861/ws'];
 
 		var led = document.getElementById('demoLed');
 		var ledLbl = document.getElementById('demoLedLbl');
