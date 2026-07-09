@@ -155,11 +155,13 @@ Then open `http://localhost:7860`. On a remote (headless) machine, forward the p
 If you find this work useful, please consider citing:
 
 ```
-@article{hansen2026hallucination,
-  title   = {Hallucination in World Models is Predictable and Preventable},
-  author  = {Nicklas Hansen and Xiaolong Wang},
-  journal = {arXiv preprint arXiv:2606.27326},
-  year    = {2026}
+@misc{Hansen2026Hallucination,
+	title={Hallucination in World Models is Predictable and Preventable},
+	author={Nicklas Hansen and Xiaolong Wang},
+	year={2026},
+	eprint={2606.27326},
+	archivePrefix={arXiv},
+	primaryClass={cs.LG}
 }
 ```
 
