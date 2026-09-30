@@ -1782,9 +1782,9 @@ if __name__ == "__main__":
     p.add_argument("--tasks_json", type=str, default="../tasks.json")  # task metadata
 
     # validation data (held-out, single directory each)
-    p.add_argument("--val_data_dir", type=str, default="./data/val",
+    p.add_argument("--val_data_dir", type=str, nargs="+", default=["./data/val"],
                    help="optional single raw-data dir for validation")
-    p.add_argument("--val_frame_dir", type=str, default="./data/val-shards",
+    p.add_argument("--val_frame_dir", type=str, nargs="+", default=["./data/val-shards"],
                    help="optional single preprocessed-frames dir for validation")
     p.add_argument("--val_every", type=int, default=2_000,
                    help="run validation rollouts every N steps (0 disables)")

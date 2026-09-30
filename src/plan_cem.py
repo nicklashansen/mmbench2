@@ -69,7 +69,9 @@ def load_episode(
     if not idxs:
         raise ValueError(f"episode {ep_id} not found in {task}")
 
-    shard_paths = sorted(glob.glob(os.path.join(frames_dir, task, "*shard*.pt")))
+    from shard_io import list_shards, load_shard
+
+    shard_paths = list_shards(os.path.join(frames_dir, task))
     if not shard_paths:
         raise FileNotFoundError(f"no shards under {frames_dir}/{task}")
 
@@ -79,8 +81,7 @@ def load_episode(
         s, off = raw_i // shard_size, raw_i % shard_size
         by_shard.setdefault(s, []).append((out_i, off))
     for s_idx, picks in by_shard.items():
-        sd = torch.load(shard_paths[s_idx], map_location="cpu", weights_only=False)
-        fr = sd["frames"]
+        fr = load_shard(shard_paths[s_idx])
         if fr.ndim == 4 and fr.shape[-1] == 3 and fr.shape[1] != 3:
             fr = fr.permute(0, 3, 1, 2).contiguous()
         for out_i, off in picks:

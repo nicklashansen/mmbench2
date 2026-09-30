@@ -8,6 +8,9 @@
 #   bash preprocess.sh expert val     # preprocess only the named partitions
 #
 # Set DATA_DIR to point at a different dataset root (default: ./data).
+# Shards are written in the chunked lossless-WebP format by default (~20-30x smaller
+# than raw uint8 and faster to load; see CHUNKED_FORMAT.md). Pass --codec raw to
+# src/preprocess_dataset.py for the legacy uint8 .pt shards.
 # For additional options (--target_size, --shard_size, --num_workers, ...),
 # call src/preprocess_dataset.py directly.
 set -euo pipefail

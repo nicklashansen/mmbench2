@@ -11,13 +11,16 @@ import torch
 import torch.distributed as dist
 from torch.utils.data import Dataset
 
+from shard_io import ChunkedShard, is_shard_path, load_shard
+
 
 class ShardedFrameDataset(Dataset):
     """
     Samples contiguous sequences from preprocessed shards across multiple roots:
 
       root/<task>/<task>_index.json  with {"shard_name": num_frames, ...}
-      root/<task>/*.pt               with {"frames": (N, 3, H, W) uint8}
+      root/<task>/*_shard####.pt     raw {"frames": (N, 3, H, W) uint8}, or
+      root/<task>/*_shard####.chunks chunked lossless WebP (see shard_io.py)
 
     Returns: (T, 3, H, W) float32 in [0,1], where T = seq_len.
 
@@ -125,18 +128,17 @@ class ShardedFrameDataset(Dataset):
                     # Run preprocess_dataset.py to generate index files and avoid this.
                     print(f"[ShardedFrameDataset] No index for task={task} in {root}, scanning shards (slow)")
                     for fname in sorted(os.listdir(task_dir)):
-                        if not fname.endswith(".pt"):
+                        if not is_shard_path(fname):
                             continue
                         path = task_dir / fname
 
                         try:
-                            td = torch.load(path, map_location="cpu", weights_only=True)
+                            frames = load_shard(path)
                         except Exception as e:
                             print(f"[ShardedFrameDataset] Skipping shard {path} (load error): {e}")
                             continue
 
-                        frames = td.get("frames", None)
-                        if not isinstance(frames, torch.Tensor):
+                        if not isinstance(frames, (torch.Tensor, ChunkedShard)):
                             print(f"[ShardedFrameDataset] Skipping shard {path} (no 'frames' tensor)")
                             continue
                         if frames.ndim != 4 or frames.shape[1] != 3:
@@ -246,7 +248,7 @@ class ShardedFrameDataset(Dataset):
         # LRU shard cache: most-recently-used shards stay resident in memory.
         # With samples_per_shard > 1, the bulk of accesses hit the current
         # shard, so a small cache_size suffices.
-        self._cache: OrderedDict[str, torch.Tensor] = OrderedDict()
+        self._cache: OrderedDict[str, Union[torch.Tensor, ChunkedShard]] = OrderedDict()
 
         # Per-worker state for samples_per_shard. These attributes are inherited
         # by forked workers but mutated independently in each worker process,
@@ -257,12 +259,13 @@ class ShardedFrameDataset(Dataset):
     def __len__(self) -> int:
         return self.total_starts
 
-    def _load_shard(self, path: str) -> torch.Tensor:
+    def _load_shard(self, path: str):
+        # Raw shards are cached as full uint8 tensors; chunked shards as lazy
+        # ChunkedShard readers (header only), which decode per request.
         if path in self._cache:
             self._cache.move_to_end(path)  # mark as most-recently-used
             return self._cache[path]
-        td = torch.load(path, map_location="cpu", weights_only=True)
-        frames = td["frames"]
+        frames = load_shard(path)
         if len(self._cache) >= self._cache_size:
             self._cache.popitem(last=False)  # evict least-recently-used
         self._cache[path] = frames

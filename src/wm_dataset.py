@@ -10,6 +10,8 @@ from typing import Dict, Mapping, Optional, Sequence, Union
 import torch
 from torch.utils.data import Dataset
 
+from shard_io import list_shards, load_shard
+
 
 class WMDataset(Dataset):
     """
@@ -171,8 +173,7 @@ class WMDataset(Dataset):
 
             for (dd, fd) in self.sources:
                 dp = os.path.join(dd, f"{task}.pt")
-                shard_glob = os.path.join(fd, task, "*shard*.pt")
-                shards = sorted(glob.glob(shard_glob))
+                shards = list_shards(os.path.join(fd, task))
                 if not os.path.exists(dp) or len(shards) == 0:
                     continue
 
@@ -222,8 +223,7 @@ class WMDataset(Dataset):
                     fallback_ok = True
                     for s in shards:
                         try:
-                            td_s = torch.load(s, map_location="cpu", weights_only=False)
-                            shard_sizes.append(int(td_s["frames"].shape[0]))
+                            shard_sizes.append(int(load_shard(s).shape[0]))
                         except Exception as e:
                             if self.verbose:
                                 print(f"[WMDataset] Skipping task={task} source=({dd},{fd}): failed to read shard {s}: {e}")
@@ -502,8 +502,7 @@ class WMDataset(Dataset):
             return cached
 
         path = self.shard_lists[task_idx][seg_idx][shard_idx]
-        td = torch.load(path, map_location="cpu", weights_only=False)
-        frames = td["frames"]
+        frames = load_shard(path)
 
         # Normalize to (N,3,H,W)
         if frames.ndim == 4 and frames.shape[-1] == 3 and frames.shape[1] != 3:

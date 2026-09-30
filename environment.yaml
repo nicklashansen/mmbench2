@@ -19,6 +19,7 @@ dependencies:
     # - ale_py==0.10  # required for continuous-action Atari (`continuous=True` kwarg in envs/atari.py); matches the datagen Dockerfile
     - aiohttp==3.13.3
     - pillow==12.0.0
+    - opencv-python==4.11.0.86  # lossless WebP encode/decode for chunked frame shards (shard_io.py)
     - gpustat==1.1.1
     - ffmpeg==1.4
     - imageio==2.37.0

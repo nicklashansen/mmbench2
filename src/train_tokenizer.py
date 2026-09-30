@@ -330,7 +330,13 @@ def load_ckpt(path: Path, *, model, opt, rms_objects: dict = None) -> tuple[int,
     if hasattr(target, "_orig_mod"):    # torch.compile wrapper
         target = target._orig_mod
     target.load_state_dict(state, strict=True)
-    opt.load_state_dict(ckpt["opt"])
+    # Optimizer/scaler state is absent from weights-only checkpoints (e.g. the
+    # released models used as finetuning inits); fall back gracefully.
+    try:
+        opt.load_state_dict(ckpt["opt"])
+    except Exception as e:
+        if is_rank0():
+            print(f"[rank0][warning] Could not load optimizer state ({e}); continuing with fresh optimizer.")
     if rms_objects is not None:
         for k, v in rms_objects.items():
             if k in ckpt.get("rms_state", {}):
@@ -391,7 +397,7 @@ def train(args):
     val_loader = None
     if args.val_data_dir is not None and args.val_every > 0:
         val_dataset = ShardedFrameDataset(
-            outdirs=[args.val_data_dir],
+            outdirs=args.val_data_dir,
             tasks=TASK_SET,
             seq_len=args.seq_len,
             iid_sampling=True,
@@ -423,7 +429,7 @@ def train(args):
     val_unseen_local_tasks = None
     if args.val_unseen_data_dir is not None and args.val_every > 0:
         val_unseen_dataset = ShardedFrameDataset(
-            outdirs=[args.val_unseen_data_dir],
+            outdirs=args.val_unseen_data_dir,
             tasks=list(UNSEEN_TASK_SET),
             seq_len=args.seq_len,
             iid_sampling=True,
@@ -531,7 +537,7 @@ def train(args):
             project=args.wandb_project,
             name=args.wandb_run_name,
             entity=args.wandb_entity,
-            mode="online",
+            mode=os.environ.get("WANDB_MODE", "online"),
             config={
                 **vars(args),
                 "run/world_size": world_size,
@@ -818,9 +824,9 @@ if __name__ == "__main__":
         "./data/mixed-small-shards",
         "./data/zeros-shards",
     ])
-    p.add_argument("--val_data_dir", type=str, default="./data/val-shards",
+    p.add_argument("--val_data_dir", type=str, nargs="+", default=["./data/val-shards"],
                    help="optional single directory of preprocessed shards used for validation")
-    p.add_argument("--val_unseen_data_dir", type=str, default=None,
+    p.add_argument("--val_unseen_data_dir", type=str, nargs="+", default=None,
                    help="optional directory of preprocessed shards for UNSEEN-task validation. "
                         "Filtered to UNSEEN_TASK_SET. Logs a parallel `val_unseen/...` namespace "
                         "with per-task PSNR and a side-by-side viz panel under `val_unseen/viz`.")
