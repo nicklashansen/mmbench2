@@ -83,8 +83,12 @@ def load_episode(
         fr = load_shard(shard_paths[s_idx])
         if fr.ndim == 4 and fr.shape[-1] == 3 and fr.shape[1] != 3:
             fr = fr.permute(0, 3, 1, 2).contiguous()
+        # One range read per shard: indexing a chunked shard frame by frame would decode a
+        # whole chunk for every frame.
+        lo = min(off for _, off in picks)
+        block = fr[lo:max(off for _, off in picks) + 1]
         for out_i, off in picks:
-            frames_out[out_i] = fr[off]
+            frames_out[out_i] = block[off - lo]
 
     frames = torch.stack(frames_out).to(torch.float32) / 255.0
     actions = td["action"][idxs].to(torch.float32)

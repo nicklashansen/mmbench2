@@ -70,7 +70,11 @@ def throughput(name, ds, batch_size, workers, collate, args):
     loader = DataLoader(ds, batch_size=batch_size, shuffle=True, num_workers=workers, drop_last=True,
                         persistent_workers=workers > 0, prefetch_factor=args.prefetch_factor if workers > 0 else None,
                         worker_init_fn=worker_init_fn, collate_fn=collate)
-    it = iter(loader)
+    def batches():                      # small datasets have fewer batches per epoch than we time
+        while True:
+            yield from loader
+
+    it = batches()
     for _ in range(args.warmup_batches):
         next(it)
     t0 = time.perf_counter()

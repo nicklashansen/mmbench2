@@ -15,8 +15,10 @@ Two on-disk shard formats are supported:
 `.chunks` file layout:
   MAGIC (8 bytes) | header_len uint32 LE | header JSON (utf-8) | chunk blobs (concatenated)
   header = {"format": "wm-chunked", "version": 1, "codec": "webp", "num_frames": N,
-            "H": H, "W": W, "chunk_frames": C, "chunks": [[offset, nbytes, n_frames], ...]}
-  offsets are relative to the first blob byte.
+            "H": H, "W": W, "chunk_frames": C, "chunks": [[offset, nbytes, n_frames], ...],
+            "crc32": [crc, ...]}
+  offsets are relative to the first blob byte. "crc32" holds one CRC-32 per chunk blob and
+  is optional: files written before it was added have no checksums and still load.
 
 `load_shard()` returns a torch uint8 tensor for raw shards and a `ChunkedShard` for
 chunked shards; both support `.shape`, `len()`, integer indexing, and contiguous slicing,
@@ -25,9 +27,11 @@ so callers can treat them interchangeably.
 import glob
 import json
 import os
+import re
 import struct
+import zlib
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -166,6 +170,7 @@ def _write_chunked(frames: torch.Tensor, path: Path, codec: str, chunk_frames: i
         "format": "wm-chunked", "version": 1, "codec": codec,
         "num_frames": int(N), "H": int(H), "W": int(W),
         "chunk_frames": int(chunk_frames), "chunks": chunks,
+        "crc32": [zlib.crc32(b) for b in blobs],
     }
     hbytes = json.dumps(header, separators=(",", ":")).encode("utf-8")
     with open(path, "wb") as f:
@@ -197,19 +202,31 @@ class ChunkedShard:
             magic = f.read(len(MAGIC))
             if magic != MAGIC:
                 raise ValueError(f"{self.path}: not a chunked shard (bad magic {magic!r})")
-            (hlen,) = struct.unpack("<I", f.read(4))
-            header = json.loads(f.read(hlen).decode("utf-8"))
-        if header.get("format") != "wm-chunked" or header.get("codec") != "webp":
-            raise ValueError(f"{self.path}: unsupported header {header.get('format')}/{header.get('codec')}")
+            try:
+                (hlen,) = struct.unpack("<I", f.read(4))
+                header = json.loads(f.read(hlen).decode("utf-8"))
+                kind = (header.get("format"), header.get("codec"), header.get("version"))
+                self.num_frames = int(header["num_frames"])
+                self.H, self.W = int(header["H"]), int(header["W"])
+                self.chunk_frames = int(header["chunk_frames"])
+                self._chunks: List[Tuple[int, int, int]] = [(int(o), int(nb), int(n)) for o, nb, n in header["chunks"]]
+                crcs = header.get("crc32")
+                self._crcs: Optional[List[int]] = None if crcs is None else [int(c) for c in crcs]
+            except (struct.error, ValueError, KeyError, TypeError, AttributeError) as e:
+                raise ValueError(f"{self.path}: corrupt header ({type(e).__name__}: {e})") from e
+            file_size = os.fstat(f.fileno()).st_size
+        if kind != ("wm-chunked", "webp", 1):
+            raise ValueError(f"{self.path}: unsupported header (format, codec, version) = {kind}")
         self._blob_start = len(MAGIC) + 4 + hlen
-        self.num_frames = int(header["num_frames"])
-        self.H, self.W = int(header["H"]), int(header["W"])
-        self.chunk_frames = int(header["chunk_frames"])
-        self._chunks: List[Tuple[int, int, int]] = [tuple(c) for c in header["chunks"]]
         starts = np.zeros(len(self._chunks) + 1, dtype=np.int64)
         starts[1:] = np.cumsum([c[2] for c in self._chunks])
         if int(starts[-1]) != self.num_frames:
             raise ValueError(f"{self.path}: chunk frame counts do not sum to num_frames")
+        if self._crcs is not None and len(self._crcs) != len(self._chunks):
+            raise ValueError(f"{self.path}: corrupt header (crc32 does not match the chunk table)")
+        expected_size = self._blob_start + max((o + nb for o, nb, _ in self._chunks), default=0)
+        if file_size < expected_size:
+            raise ValueError(f"{self.path}: truncated ({file_size} bytes on disk, header expects {expected_size})")
         self._starts = starts
         # Rough accounting for byte-budgeted caches (WMDataset.cache_mb): only the header
         # stays resident.
@@ -229,10 +246,14 @@ class ChunkedShard:
         fd = os.open(self.path, os.O_RDONLY)
         try:
             blobs = []
-            for off, nb, _ in self._chunks[c0:c1 + 1]:
+            for ci in range(c0, c1 + 1):
+                off, nb, _ = self._chunks[ci]
                 blob = os.pread(fd, nb, self._blob_start + off)
                 if len(blob) != nb:
                     raise IOError(f"{self.path}: short read at offset {off} ({len(blob)}/{nb} bytes)")
+                # Lossless WebP often still decodes after a bit flip, to wrong pixels.
+                if self._crcs is not None and zlib.crc32(blob) != self._crcs[ci]:
+                    raise IOError(f"{self.path}: checksum mismatch in chunk {ci} (file is corrupt)")
                 blobs.append(blob)
             return blobs
         finally:
@@ -262,7 +283,7 @@ class ChunkedShard:
             if step != 1:
                 raise IndexError("ChunkedShard only supports unit-step slices")
             return self.read_range(start, max(start, stop))
-        if isinstance(key, (int, np.integer)):
+        if isinstance(key, (int, np.integer)) and not isinstance(key, bool):
             i = int(key)
             if i < 0:
                 i += self.num_frames
@@ -283,6 +304,24 @@ def load_shard(path: Union[str, Path]) -> Union[torch.Tensor, ChunkedShard]:
     raise ValueError(f"unrecognized shard file {path}")
 
 
+_SHARD_INDEX = re.compile(r"_shard(\d+)\.[a-z]+$")
+
+
+def _check_contiguous(paths: List[str], task_dir: str) -> None:
+    # Readers concatenate shards positionally (WMDataset, plan_cem), so a gap left by a failed
+    # or deleted shard would shift every later frame against its action and reward.
+    matches = [_SHARD_INDEX.search(os.path.basename(p)) for p in paths]
+    if not all(matches):
+        return  # not named by preprocess_dataset.py; nothing to check against
+    present = {int(m.group(1)) for m in matches}
+    missing = sorted(set(range(max(present, default=-1) + 1)) - present)
+    if missing:
+        raise ValueError(
+            f"{task_dir}: shard indices are not contiguous (missing {missing[:5]}), which would misalign "
+            "frames with actions/rewards; rerun preprocess_dataset.py for this task"
+        )
+
+
 def list_shards(task_dir: Union[str, Path]) -> List[str]:
     """
     Sorted shard paths in a task directory (either format).
@@ -290,7 +329,8 @@ def list_shards(task_dir: Union[str, Path]) -> List[str]:
     If `<task>_index.json` exists it is authoritative: preprocess_dataset.py writes it last,
     so it names exactly the shards of the completed run, and leftovers of an interrupted run
     in the other format are ignored. Without an index, a directory holding both formats is
-    ambiguous (at least one of them is partial) and is refused.
+    ambiguous (at least one of them is partial) and is refused. A gap in the shard numbering
+    is refused either way; missing trailing shards only truncate the task.
     """
     task_dir = str(task_dir)
     task = os.path.basename(os.path.normpath(task_dir))
@@ -306,7 +346,9 @@ def list_shards(task_dir: Union[str, Path]) -> List[str]:
             missing = [p for p in paths if not os.path.exists(p)]
             if missing:
                 print(f"[shard_io] {len(missing)} shards listed in {index_path} are missing (e.g. {missing[0]})")
-            return [p for p in paths if os.path.exists(p)]
+            paths = [p for p in paths if os.path.exists(p)]
+            _check_contiguous(paths, task_dir)
+            return paths
     chunked = sorted(glob.glob(os.path.join(task_dir, "*_shard*" + CHUNKED_EXT)))
     raw = sorted(glob.glob(os.path.join(task_dir, "*_shard*" + RAW_EXT)))
     if chunked and raw:
@@ -314,4 +356,5 @@ def list_shards(task_dir: Union[str, Path]) -> List[str]:
             f"{task_dir} holds both {CHUNKED_EXT} and {RAW_EXT} shards and no {task}_index.json, so at "
             "least one set is partial; rerun preprocess_dataset.py for this task or delete one format"
         )
+    _check_contiguous(chunked or raw, task_dir)
     return chunked or raw

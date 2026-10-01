@@ -52,6 +52,16 @@ def num_open_fds():
 needs_proc_fd = pytest.mark.skipif(not os.path.isdir("/proc/self/fd"), reason="needs /proc/self/fd")
 
 
+def rewrite_header(path, mutate):
+    """Rewrite a .chunks file with `mutate(header)` applied, keeping the blobs."""
+    data = Path(path).read_bytes()
+    hlen = int.from_bytes(data[8:12], "little")
+    header = json.loads(data[12:12 + hlen])
+    mutate(header)
+    hbytes = json.dumps(header).encode()
+    Path(path).write_bytes(data[:8] + len(hbytes).to_bytes(4, "little") + hbytes + data[12 + hlen:])
+
+
 def run_preprocess(filedir, outdir, codec, chunk_frames=16, shard_size=SHARD_SIZE):
     return preprocess_dataset.process_task((TASK, str(filedir), str(outdir), 224, shard_size, codec, chunk_frames))
 
@@ -131,8 +141,9 @@ def test_indexing_matches_tensor(tmp_path):
     for bad in (slice(None, None, 2), slice(None, None, -1)):
         with pytest.raises(IndexError):
             shard[bad]
-    with pytest.raises(TypeError):
-        shard[[0, 1]]
+    for bad in ([0, 1], True, False, (0,), torch.tensor(3), 1.0):   # no silent reinterpretation
+        with pytest.raises(TypeError):
+            shard[bad]
     out = shard[3:9]
     assert out.is_contiguous() and out.dtype == torch.uint8
     out.zero_()                                           # results are independent copies
@@ -203,21 +214,58 @@ def test_raw_codec_saves_only_the_slice(tmp_path):
     assert os.path.getsize(tmp_path / "t_shard0000.pt") < 2 * view.numel()
 
 
-def test_corrupt_files_raise(tmp_path):
+def test_malformed_files_are_rejected_at_open(tmp_path):
     path = tmp_path / "t_shard0000.chunks"
     write_shard(make_frames(40, 16, 16), path)
     data = path.read_bytes()
+    hlen = int.from_bytes(data[8:12], "little")
     bad = tmp_path / "bad_shard0000.chunks"
-    bad.write_bytes(b"NOTMAGIC" + data[8:])
-    with pytest.raises(ValueError):
-        ChunkedShard(bad)
-    bad.write_bytes(data[:-1])                            # truncated inside the last chunk
-    shard = ChunkedShard(bad)
-    assert torch.equal(shard[0:16], ChunkedShard(path)[0:16])
-    with pytest.raises(IOError):
-        shard[:]
+    cases = {
+        "bad magic": b"NOTMAGIC" + data[8:],
+        "empty": b"",
+        "cut inside header length": data[:10],
+        "cut inside header": data[:12 + hlen // 2],
+        "cut before blobs": data[:12 + hlen],
+        "cut inside last chunk": data[:-1],
+        "header is not JSON": data[:12] + b"x" * hlen + data[12 + hlen:],
+    }
+    for name, payload in cases.items():
+        bad.write_bytes(payload)
+        with pytest.raises(ValueError, match="bad_shard0000"):
+            ChunkedShard(bad)
+    for mutate in (lambda h: h.update(version=2), lambda h: h.pop("chunks"), lambda h: h.update(num_frames=41),
+                   lambda h: h["crc32"].pop(), lambda h: h.update(chunks=None)):
+        bad.write_bytes(data)
+        rewrite_header(bad, mutate)
+        with pytest.raises(ValueError, match="bad_shard0000"):
+            ChunkedShard(bad)
     with pytest.raises(ValueError):
         load_shard(tmp_path / "t_shard0000.bin")
+
+
+def test_checksums_catch_corrupt_chunks(tmp_path):
+    frames = make_frames(40, 32, 32)
+    path = tmp_path / "t_shard0000.chunks"
+    write_shard(frames, path)
+    data = path.read_bytes()
+    blob_start = 12 + int.from_bytes(data[8:12], "little")
+    bad = tmp_path / "bad_shard0000.chunks"
+    rng = np.random.default_rng(0)
+    for pos in rng.integers(blob_start, len(data), size=40):
+        flipped = bytearray(data)
+        flipped[pos] ^= 1 << int(rng.integers(0, 8))
+        bad.write_bytes(bytes(flipped))
+        with pytest.raises(IOError, match="checksum"):
+            ChunkedShard(bad)[:]
+
+
+def test_files_without_checksums_still_load(tmp_path):
+    """Shards written before the crc32 field existed have no checksums."""
+    frames = make_frames(40, 16, 16)
+    path = tmp_path / "t_shard0000.chunks"
+    write_shard(frames, path)
+    rewrite_header(path, lambda h: h.pop("crc32"))
+    assert torch.equal(load_shard(path)[:], frames)
 
 
 # ----------------------------------------------------------------------------- reader lifetime
@@ -355,6 +403,53 @@ def test_index_is_authoritative_in_mixed_directory(toy, tmp_path):
     assert all(p.endswith(".pt") for p in ds.shard_lists[0][0])
     sf = ShardedFrameDataset(str(mixed), tasks=[TASK], seq_len=T, iid_sampling=False, verbose=False)
     assert [s["num_frames"] for s in sf.shards] == [32, 32, 32]
+
+
+@pytest.mark.parametrize("codec", ["webp", "raw"])
+def test_gap_in_shard_numbering_is_refused(toy, tmp_path, codec):
+    """A missing middle shard would shift every later frame against its action and reward."""
+    import shutil
+
+    src = toy.webp if codec == "webp" else toy.raw
+    ext = ".chunks" if codec == "webp" else ".pt"
+    index_path = tmp_path / "shards" / TASK / f"{TASK}_index.json"
+
+    def fresh():
+        shutil.rmtree(tmp_path / "shards", ignore_errors=True)
+        shutil.copytree(src, tmp_path / "shards")
+
+    fresh()                                               # shard file lost, index still lists it
+    os.remove(tmp_path / "shards" / TASK / f"{TASK}_shard0001{ext}")
+    with pytest.raises(ValueError, match="contiguous"):
+        wm_dataset(toy.data, str(tmp_path / "shards"))
+    index = json.load(open(index_path))                   # index written over a failed save (as on main)
+    del index[f"{TASK}_shard0001{ext}"]
+    index_path.write_text(json.dumps(index))
+    with pytest.raises(ValueError, match="contiguous"):
+        wm_dataset(toy.data, str(tmp_path / "shards"))
+    os.remove(index_path)                                 # no index at all
+    with pytest.raises(ValueError, match="contiguous"):
+        list_shards(tmp_path / "shards" / TASK)
+
+    fresh()                                               # a missing tail only truncates, frames stay aligned
+    os.remove(tmp_path / "shards" / TASK / f"{TASK}_shard0003{ext}")
+    os.remove(tmp_path / "shards" / TASK / f"{TASK}_shard0002{ext}")
+    ds = wm_dataset(toy.data, str(tmp_path / "shards"))
+    assert ds.seg_cum_frames == [[64]] and len(ds) > 0
+    for i in range(len(ds)):
+        _, start = ds._lookup(i)
+        assert torch.equal(ds[i]["obs"], toy.frames[start:start + T + 1])
+
+
+@pytest.mark.parametrize("fmt", ["webp", "raw"])
+def test_plan_cem_load_episode(toy, fmt):
+    plan_cem = pytest.importorskip("plan_cem")
+    frames_dir = toy.webp if fmt == "webp" else toy.raw
+    for ep_id in (0, 1, 4):                               # episode 1 (frames 20..39) crosses a shard boundary
+        ep = plan_cem.load_episode(TASK, toy.data, frames_dir, ep_id, shard_size=SHARD_SIZE)
+        lo, hi = ep_id * EP_LEN, min((ep_id + 1) * EP_LEN, sum(STRIPS))
+        assert torch.equal(ep.frames, toy.frames[lo:hi].float() / 255.0)
+        assert torch.equal(torch.nan_to_num(ep.actions), torch.nan_to_num(toy.action[lo:hi]))
 
 
 def test_mixed_directory_without_index_is_refused(toy, tmp_path):

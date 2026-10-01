@@ -19,7 +19,11 @@ MAGIC "WMCHUNK1" | header_len uint32 LE | header JSON | chunk blobs (concatenate
 Frames are grouped into fixed-size chunks (default 16). Each chunk is the horizontal
 strip `(H, n*W, 3)` of its `n` frames, encoded as lossless WebP. The JSON header lists
 `[offset, nbytes, n_frames]` per chunk, so a reader `pread()`s and decodes only the
-chunks overlapping a requested frame range. The `<task>_index.json` convention
+chunks overlapping a requested frame range. It also stores a CRC-32 per chunk (`crc32`),
+which readers verify on every read, since a corrupted lossless-WebP blob often still
+decodes — to wrong pixels. Files written before the checksums were added have none and
+still load. A malformed, truncated, or unsupported-version file is rejected when it is
+opened. The `<task>_index.json` convention
 (`{shard_name: num_frames}`, index written last = task complete) is unchanged, and the
 legacy raw `.pt` format remains fully supported for both reading and writing.
 
@@ -48,8 +52,12 @@ legacy raw `.pt` format remains fully supported for both reading and writing.
   and readers refuse it; re-run preprocessing for that task or delete one format.
 - `preprocess_dataset.py` does not write a task's index if any shard save failed and exits
   non-zero, so re-running it resumes the missing tasks. A task directory without an index
-  is incomplete: readers still accept it (slow scan), so finish preprocessing before
-  training on it.
+  is incomplete: readers still accept it (slow scan, with a warning), so finish
+  preprocessing before training on it.
+- Readers concatenate a task's shards in order, so a gap in the shard numbering (a failed
+  or deleted shard) would shift every later frame against its action and reward. Such a
+  directory is refused, with or without an index; missing trailing shards only shorten
+  the task.
 
 ## Performance
 

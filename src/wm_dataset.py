@@ -219,6 +219,8 @@ class WMDataset(Dataset):
                         shard_sizes = None
                 if shard_sizes is None:
                     # Fallback: load each shard to get its size
+                    if self.verbose:
+                        print(f"[WMDataset] No usable index for task={task} in {fd} (preprocessing incomplete?); reading shard sizes from files")
                     shard_sizes = []
                     fallback_ok = True
                     for s in shards:
