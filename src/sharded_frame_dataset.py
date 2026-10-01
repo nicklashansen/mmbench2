@@ -1,6 +1,5 @@
 # sharded_frame_dataset.py
 import json
-import os
 import bisect
 import random
 from collections import OrderedDict
@@ -11,7 +10,7 @@ import torch
 import torch.distributed as dist
 from torch.utils.data import Dataset
 
-from shard_io import ChunkedShard, is_shard_path, load_shard
+from shard_io import ChunkedShard, list_shards, load_shard
 
 
 class ShardedFrameDataset(Dataset):
@@ -124,14 +123,11 @@ class ShardedFrameDataset(Dataset):
                         total_starts += num_starts
                         self.cum_starts.append(total_starts)
                 else:
-                    # Slow fallback: load every shard to inspect its shape.
+                    # Slow fallback: load every shard to inspect its shape (raw shards are
+                    # read in full; chunked shards only need their header).
                     # Run preprocess_dataset.py to generate index files and avoid this.
                     print(f"[ShardedFrameDataset] No index for task={task} in {root}, scanning shards (slow)")
-                    for fname in sorted(os.listdir(task_dir)):
-                        if not is_shard_path(fname):
-                            continue
-                        path = task_dir / fname
-
+                    for path in list_shards(task_dir):
                         try:
                             frames = load_shard(path)
                         except Exception as e:

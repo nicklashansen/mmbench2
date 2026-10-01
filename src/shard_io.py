@@ -8,9 +8,9 @@ Two on-disk shard formats are supported:
   webp    `<task>_shard####.chunks`  frames grouped into fixed-size chunks; each chunk
                                      is the horizontal strip (H, n*W, 3) of `n` frames
                                      encoded as lossless WebP. Bit-identical to raw,
-                                     ~20-30x smaller, and readers decode only the chunks
-                                     overlapping a requested window instead of loading
-                                     the whole shard.
+                                     roughly 10-30x smaller (content-dependent), and
+                                     readers decode only the chunks overlapping a
+                                     requested window instead of loading the whole shard.
 
 `.chunks` file layout:
   MAGIC (8 bytes) | header_len uint32 LE | header JSON (utf-8) | chunk blobs (concatenated)
@@ -38,7 +38,7 @@ CHUNKED_EXT = ".chunks"
 DEFAULT_CHUNK_FRAMES = 16
 CODECS = ("webp", "raw")
 
-# libwebp refuses images wider than 16383 px, which caps chunk_frames at 224 px.
+# libwebp refuses images wider than 16383 px, which caps chunk_frames at 73 for 224 px frames.
 _WEBP_MAX_DIM = 16383
 
 
@@ -48,6 +48,30 @@ def shard_ext(codec: str) -> str:
     if codec == "webp":
         return CHUNKED_EXT
     raise ValueError(f"unknown codec {codec!r}; expected one of {CODECS}")
+
+
+def check_codec(codec: str, chunk_frames: int = DEFAULT_CHUNK_FRAMES, frame_size: int = 224) -> None:
+    """
+    Raise if `write_shard` could not write full chunks of `frame_size` px frames with this
+    configuration. Call once up front so a bad setting fails before any data is read.
+    """
+    shard_ext(codec)
+    if codec != "webp":
+        return
+    if chunk_frames < 1:
+        raise ValueError("chunk_frames must be >= 1")
+    if chunk_frames * frame_size > _WEBP_MAX_DIM:
+        raise ValueError(
+            f"chunk_frames={chunk_frames} at {frame_size} px gives a {chunk_frames * frame_size} px strip, "
+            f"above the WebP limit of {_WEBP_MAX_DIM} px; use chunk_frames <= {_WEBP_MAX_DIM // frame_size}"
+        )
+    try:
+        import cv2  # noqa: F401
+    except ImportError as e:
+        raise ImportError(
+            f"codec 'webp' needs OpenCV, which failed to import ({e}); "
+            "install opencv-python (see environment.yaml) or use codec 'raw'"
+        ) from e
 
 
 def shard_filename(task: str, shard_idx: int, codec: str) -> str:
@@ -159,8 +183,9 @@ class ChunkedShard:
     Lazy reader for a `.chunks` shard. Mimics the subset of the tensor interface that
     the dataset classes use: `.shape`, `.ndim`, `.dtype`, `len()`, `shard[i]`, and
     `shard[a:b]` (unit step). Indexing decodes only the chunks that overlap the request
-    and returns a fresh uint8 tensor. The file descriptor is opened lazily per process,
-    so instances are safe to create before forking DataLoader workers.
+    and returns a fresh uint8 tensor. Only the header is held between reads (the file is
+    opened per read), so instances can be cached in any number and are safe to pickle or
+    share with forked DataLoader workers.
     """
 
     ndim = 4
@@ -186,7 +211,6 @@ class ChunkedShard:
         if int(starts[-1]) != self.num_frames:
             raise ValueError(f"{self.path}: chunk frame counts do not sum to num_frames")
         self._starts = starts
-        self._fd = None
         # Rough accounting for byte-budgeted caches (WMDataset.cache_mb): only the header
         # stays resident.
         self.nbytes = len(self._chunks) * 24 + 256
@@ -198,26 +222,21 @@ class ChunkedShard:
     def __len__(self) -> int:
         return self.num_frames
 
-    def __getstate__(self):
-        d = self.__dict__.copy()
-        d["_fd"] = None
-        return d
-
-    def __del__(self):
-        fd = getattr(self, "_fd", None)
-        if fd is not None:
-            try:
-                os.close(fd)
-            except OSError:
-                pass
-
-    def _read(self, offset: int, nbytes: int) -> bytes:
-        if self._fd is None:
-            self._fd = os.open(self.path, os.O_RDONLY)
-        out = os.pread(self._fd, nbytes, self._blob_start + offset)
-        if len(out) != nbytes:
-            raise IOError(f"{self.path}: short read at offset {offset} ({len(out)}/{nbytes} bytes)")
-        return out
+    def _read_chunks(self, c0: int, c1: int) -> List[bytes]:
+        # Open per call instead of keeping a descriptor: readers are cached per shard
+        # (WMDataset never evicts them, see `nbytes`), so one held descriptor each would
+        # exhaust RLIMIT_NOFILE on datasets with thousands of shards.
+        fd = os.open(self.path, os.O_RDONLY)
+        try:
+            blobs = []
+            for off, nb, _ in self._chunks[c0:c1 + 1]:
+                blob = os.pread(fd, nb, self._blob_start + off)
+                if len(blob) != nb:
+                    raise IOError(f"{self.path}: short read at offset {off} ({len(blob)}/{nb} bytes)")
+                blobs.append(blob)
+            return blobs
+        finally:
+            os.close(fd)
 
     def read_range(self, start: int, end: int) -> torch.Tensor:
         """Decode frames [start, end) -> (end-start, 3, H, W) uint8 tensor."""
@@ -228,9 +247,9 @@ class ChunkedShard:
         c0 = int(np.searchsorted(self._starts, start, side="right") - 1)
         c1 = int(np.searchsorted(self._starts, end - 1, side="right") - 1)
         parts = []
-        for ci in range(c0, c1 + 1):
-            off, nb, n = self._chunks[ci]
-            arr = _decode_chunk_webp(self._read(off, nb), n, self.H, self.W)
+        for ci, blob in zip(range(c0, c1 + 1), self._read_chunks(c0, c1)):
+            n = self._chunks[ci][2]
+            arr = _decode_chunk_webp(blob, n, self.H, self.W)
             cs = int(self._starts[ci])
             lo, hi = max(start - cs, 0), min(end - cs, n)
             parts.append(arr[lo:hi])
@@ -265,14 +284,34 @@ def load_shard(path: Union[str, Path]) -> Union[torch.Tensor, ChunkedShard]:
 
 
 def list_shards(task_dir: Union[str, Path]) -> List[str]:
-    """Sorted shard paths in a task directory (either format; chunked wins if both exist)."""
+    """
+    Sorted shard paths in a task directory (either format).
+
+    If `<task>_index.json` exists it is authoritative: preprocess_dataset.py writes it last,
+    so it names exactly the shards of the completed run, and leftovers of an interrupted run
+    in the other format are ignored. Without an index, a directory holding both formats is
+    ambiguous (at least one of them is partial) and is refused.
+    """
     task_dir = str(task_dir)
+    task = os.path.basename(os.path.normpath(task_dir))
+    index_path = os.path.join(task_dir, f"{task}_index.json")
+    if os.path.exists(index_path):
+        try:
+            with open(index_path) as f:
+                names = sorted(json.load(f))
+        except (OSError, ValueError, TypeError) as e:
+            print(f"[shard_io] ignoring unreadable index {index_path}: {e}")
+        else:
+            paths = [os.path.join(task_dir, name) for name in names]
+            missing = [p for p in paths if not os.path.exists(p)]
+            if missing:
+                print(f"[shard_io] {len(missing)} shards listed in {index_path} are missing (e.g. {missing[0]})")
+            return [p for p in paths if os.path.exists(p)]
     chunked = sorted(glob.glob(os.path.join(task_dir, "*_shard*" + CHUNKED_EXT)))
     raw = sorted(glob.glob(os.path.join(task_dir, "*_shard*" + RAW_EXT)))
     if chunked and raw:
-        print(f"[shard_io] {task_dir} holds both .chunks and .pt shards; using .chunks")
+        raise ValueError(
+            f"{task_dir} holds both {CHUNKED_EXT} and {RAW_EXT} shards and no {task}_index.json, so at "
+            "least one set is partial; rerun preprocess_dataset.py for this task or delete one format"
+        )
     return chunked or raw
-
-
-def is_shard_path(name: str) -> bool:
-    return "_shard" in os.path.basename(name) and (name.endswith(RAW_EXT) or name.endswith(CHUNKED_EXT))

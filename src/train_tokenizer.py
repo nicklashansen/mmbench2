@@ -330,7 +330,7 @@ def load_ckpt(path: Path, *, model, opt, rms_objects: dict = None) -> tuple[int,
     if hasattr(target, "_orig_mod"):    # torch.compile wrapper
         target = target._orig_mod
     target.load_state_dict(state, strict=True)
-    # Optimizer/scaler state is absent from weights-only checkpoints (e.g. the
+    # Optimizer state is absent from weights-only checkpoints (e.g. the
     # released models used as finetuning inits); fall back gracefully.
     try:
         opt.load_state_dict(ckpt["opt"])
@@ -825,9 +825,9 @@ if __name__ == "__main__":
         "./data/zeros-shards",
     ])
     p.add_argument("--val_data_dir", type=str, nargs="+", default=["./data/val-shards"],
-                   help="optional single directory of preprocessed shards used for validation")
+                   help="one or more directories of preprocessed shards used for validation")
     p.add_argument("--val_unseen_data_dir", type=str, nargs="+", default=None,
-                   help="optional directory of preprocessed shards for UNSEEN-task validation. "
+                   help="optional directories of preprocessed shards for UNSEEN-task validation. "
                         "Filtered to UNSEEN_TASK_SET. Logs a parallel `val_unseen/...` namespace "
                         "with per-task PSNR and a side-by-side viz panel under `val_unseen/viz`.")
     p.add_argument("--val_every", type=int, default=2_000,

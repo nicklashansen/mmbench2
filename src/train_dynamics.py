@@ -1200,8 +1200,8 @@ def train(args):
     )
 
     # ---- validation data (rank 0 only) ----
-    # Mirrors the train dataset construction but reads from a single held-out
-    # directory. We only build it on rank 0 because the existing eval block
+    # Mirrors the train dataset construction but reads from the held-out
+    # directories. We only build it on rank 0 because the existing eval block
     # also runs on rank 0 only — other ranks idle at the next collective.
     val_loader = None
     val_iter = None
@@ -1781,11 +1781,11 @@ if __name__ == "__main__":
     ])
     p.add_argument("--tasks_json", type=str, default="../tasks.json")  # task metadata
 
-    # validation data (held-out, single directory each)
+    # validation data (held-out; data and frame dirs are paired like --data_dirs/--frame_dirs)
     p.add_argument("--val_data_dir", type=str, nargs="+", default=["./data/val"],
-                   help="optional single raw-data dir for validation")
+                   help="one or more raw-data dirs for validation")
     p.add_argument("--val_frame_dir", type=str, nargs="+", default=["./data/val-shards"],
-                   help="optional single preprocessed-frames dir for validation")
+                   help="one or more preprocessed-frames dirs for validation (paired with --val_data_dir)")
     p.add_argument("--val_every", type=int, default=2_000,
                    help="run validation rollouts every N steps (0 disables)")
 
@@ -1795,7 +1795,8 @@ if __name__ == "__main__":
     p.add_argument("--prefetch_factor", type=int, default=4,
                    help="batches prefetched per worker")
     p.add_argument("--cache_mb", type=int, default=13312,
-                   help="per-worker LRU shard cache size in MB (WMDataset)")
+                   help="per-worker LRU shard cache size in MB (WMDataset); only raw .pt "
+                        "shards are held in memory, chunked shards are decoded per window")
     p.add_argument("--samples_per_shard", type=int, default=24,
                    help="sequences drawn from a shard before switching "
                         "(1 = pure iid, larger = less I/O)")

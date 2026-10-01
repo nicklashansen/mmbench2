@@ -72,7 +72,7 @@ The Atari domain's `ale-py` dependency is installed via the `gymnasium[atari]` e
 
 ## Data preprocessing
 
-The dataset is preprocessed into a sharded format for efficient loading during training (the full preprocessed dataset requires roughly **8 TB** of disk). Preprocess a single partition by pointing `--filedir` at the raw partition and `--outdir` at the shard output directory:
+The dataset is preprocessed into a sharded format for efficient loading during training. Shards are written as chunked lossless WebP by default, which is roughly 10-30x smaller than the legacy raw uint8 format (`--codec raw`, roughly **8 TB** of disk for the full dataset) but slower to preprocess; see `CHUNKED_FORMAT.md` for the trade-offs. Preprocess a single partition by pointing `--filedir` at the raw partition and `--outdir` at the shard output directory:
 
 ```
 cd src

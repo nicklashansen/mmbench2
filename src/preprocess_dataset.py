@@ -1,7 +1,6 @@
 # preprocess_dataset.py
 import json
 import multiprocessing as mp
-import os
 from pathlib import Path
 
 import torch
@@ -10,7 +9,7 @@ import torch.nn.functional as F
 
 import argparse
 
-from shard_io import CODECS, DEFAULT_CHUNK_FRAMES, shard_filename, write_shard
+from shard_io import CODECS, DEFAULT_CHUNK_FRAMES, check_codec, shard_filename, write_shard
 from task_set import TASK_SET, UNSEEN_TASK_SET
 
 
@@ -146,6 +145,12 @@ TASK_SET_PRESETS = {
 
 
 def main(args):
+    # Fail before reading any data: write_shard would otherwise reject every shard only
+    # after each task's PNGs have been decoded.
+    try:
+        check_codec(args.codec, args.chunk_frames, args.target_size)
+    except (ValueError, ImportError) as e:
+        raise SystemExit(f"error: {e}")
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
     if args.tasks is None:
         tasks = TASK_SET_PRESETS[args.task_set]
@@ -170,11 +175,13 @@ if __name__ == "__main__":
     p.add_argument("--target_size", type=int, default=224)
     p.add_argument("--shard_size", type=int, default=4096)
     p.add_argument("--codec", type=str, default="webp", choices=CODECS,
-                   help="Shard format: 'webp' = chunked lossless WebP (.chunks, ~20-30x "
-                        "smaller than raw, decoded per window at load time); 'raw' = "
-                        "uint8 torch.save shards (.pt). Both are bit-identical.")
+                   help="Shard format: 'webp' = chunked lossless WebP (.chunks, roughly 10-30x "
+                        "smaller than raw, decoded per window at load time, slower to "
+                        "preprocess); 'raw' = uint8 torch.save shards (.pt). Both are "
+                        "bit-identical.")
     p.add_argument("--chunk_frames", type=int, default=DEFAULT_CHUNK_FRAMES,
-                   help="Frames per encoded chunk for --codec webp.")
+                   help="Frames per encoded chunk for --codec webp. chunk_frames * target_size "
+                        "must not exceed 16383 px (at most 73 at 224 px).")
     p.add_argument("--num_workers", type=int, default=16)
     p.add_argument("--tasks", type=str, nargs="+", default=None,
                    help="Explicit task list to preprocess. Overrides --task_set.")

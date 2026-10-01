@@ -14,9 +14,11 @@ All code lives under `src/`:
 - `plan_cem.py` — evaluation via CEM planning.
 - `interactive.py` (+ `interactive.html`) — the browser interface for open-ended interaction with the model.
 - `wm_dataset.py`, `sharded_frame_dataset.py`, `preprocess_dataset.py`, `task_set.py` — dataset loading and preprocessing.
-- `shard_io.py` — shared reader/writer for frame shards; supports chunked lossless-WebP shards (`.chunks`, default, ~20-30x smaller than raw) and raw uint8 `.pt` shards. Use `load_shard()`/`list_shards()` instead of `torch.load`/globbing in new code; see `CHUNKED_FORMAT.md`.
+- `shard_io.py` — shared reader/writer for frame shards; supports chunked lossless-WebP shards (`.chunks`, default, roughly 10-30x smaller than raw) and raw uint8 `.pt` shards. Use `load_shard()`/`list_shards()` instead of `torch.load`/globbing in new code; see `CHUNKED_FORMAT.md`.
 - `envs/` — Gymnasium-compatible simulators for every task.
 - `download_dataset.py` / `download_checkpoints.py` — fetch the dataset and pretrained checkpoints from the Hugging Face Hub.
+
+Tests for the shard formats and data loading live in `tests/` at the repo root (`python -m pytest tests -q`; CPU only, synthetic data).
 
 ## Dataset / observation convention (load-bearing)
 For a trajectory of length `T+1` there are `T+1` observations but only `T` actions and `T` rewards. The first tuple is `(obs_0, nan, nan)` (no action or reward precedes the initial observation); thereafter `(obs_t, action_{t-1}, reward_{t-1})`, where `action_{t-1}` and `reward_{t-1}` describe the transition `obs_{t-1} → obs_t`. Keep this convention in mind for any change to data loading or preprocessing.

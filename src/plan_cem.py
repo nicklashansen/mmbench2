@@ -22,7 +22,6 @@ Typical usage:
         --output ./logs/plan_cem_og-point-maze.csv
 """
 import argparse
-import glob
 import json
 import math
 import os
